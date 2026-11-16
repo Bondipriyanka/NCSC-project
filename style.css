@@ -838,46 +838,42 @@ body.mode-mobile #uploaded-image {
     object-fit: cover !important;
 }
 
-/* Landscape Mode (Android Tablet & Landscape Mobile) */
-@media (orientation: landscape) {
-    .dashboard-grid,
-    body.mode-mobile .dashboard-grid {
-        display: grid !important;
-        grid-template-columns: 280px 1.2fr 1fr !important;
-        gap: 15px !important;
-        max-width: 100% !important;
-        padding: 10px 15px !important;
-    }
-    body.mode-mobile header,
-    body.mode-mobile footer,
-    body.mode-mobile .panel {
-        display: block !important;
-    }
-    body.mode-mobile .scanner-panel,
-    body.mode-mobile .phone-mockup {
-        width: 100% !important;
-    }
+/* 📱 Tablet APK Landscape Mode (Applied ONLY in Android Tablet APK) */
+body.mode-tablet {
+    overflow-x: hidden !important;
 }
 
-/* Portrait Mode (Vertical Mobile testing) */
-@media (orientation: portrait), (max-width: 899px) {
-    .dashboard-grid,
-    body.mode-mobile .dashboard-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 15px !important;
-        padding: 10px !important;
-        max-width: 100% !important;
-    }
-    body.mode-mobile .panel {
-        display: block !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    body.mode-mobile .scanner-panel,
-    body.mode-mobile .phone-mockup {
-        width: 100% !important;
-    }
+body.mode-tablet .dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 280px 1.2fr 1fr !important;
+    gap: 15px !important;
+    max-width: 100% !important;
+    padding: 10px 15px !important;
+}
+
+body.mode-tablet .scanner-panel,
+body.mode-tablet .phone-mockup {
+    width: 100% !important;
+}
+
+/* 📱 Mobile APK Mode (Applied ONLY in Android Mobile APK) */
+body.mode-mobile .dashboard-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    padding: 10px !important;
+    max-width: 100% !important;
+}
+
+body.mode-mobile .panel {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+body.mode-mobile .scanner-panel,
+body.mode-mobile .phone-mockup {
+    width: 100% !important;
 }
 
 /* History Log Table styling */

@@ -122,8 +122,8 @@ public class MainActivity extends AppCompatActivity {
         // Request runtime permissions for Camera
         checkPermissions();
 
-        // Load the HTML simulator from assets/www via the virtual offline domain
-        myWebView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html");
+        // Load the HTML simulator from assets/www via the virtual offline domain in tablet mode
+        myWebView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html?mode=tablet");
     }
 
     private String getMimeType(String path) {

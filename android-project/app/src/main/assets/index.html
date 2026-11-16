@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NCSC Project 2026 - Smart Freshness Detection App Dashboard</title>
+    <script>
+        if (window.location.search.includes("mode=mobile")) {
+            window.location.replace("www/index.html?mode=tablet");
+        }
+    </script>
     <link rel="stylesheet" href="style.css?v=2.5">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2e7d32">

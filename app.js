@@ -86,6 +86,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Detect mobile mode
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("mode") === "tablet" || window.location.search.includes("mode=tablet")) {
+        document.body.classList.add("mode-tablet");
+    }
     if (urlParams.get("mode") === "mobile" || window.location.search.includes("mode=mobile")) {
         document.body.classList.add("mode-mobile");
     }
