@@ -370,7 +370,8 @@ class FruitFreshnessDetector:
         skin_ratio = float(skin_mask.sum() / valid_area)
 
         # 🛑 PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
-        if (f_hint != "potato" and skin_ratio > 0.18) or (skin_ratio > 0.38):
+        has_real_produce = (yellow_ratio > 0.08 or bright_red_ratio > 0.08 or green_ratio > 0.08)
+        if not has_real_produce and skin_ratio > 0.28:
             return {
                 "status": "mismatch",
                 "detected_fruit": "human_hand",
@@ -393,6 +394,29 @@ class FruitFreshnessDetector:
                 "dominant_stage": "invalid",
                 "count": 0,
                 "message": "⚠️ ELECTRONIC DEVICE DETECTED: A mobile phone or electronic device was detected in frame. Please scan a real biological fruit or vegetable."
+            }
+
+        # 🥕 OPTICAL PRODUCE CLASSIFIER (Auto-detects actual vegetable/fruit in frame)
+        optically_detected = None
+        orange_mask = ((h >= 10) & (h <= 22) & (s >= 90) & (v >= 80) & not_blue_mask)
+        orange_ratio = float(orange_mask.sum() / valid_area)
+
+        if orange_ratio > 0.20 and bright_red_ratio < 0.15:
+            optically_detected = "carrot" if f_hint != "orange" else "orange"
+        elif bright_red_ratio > 0.20:
+            optically_detected = "tomato" if yellow_ratio > 0.10 else "apple"
+        elif yellow_ratio > 0.20:
+            optically_detected = "banana"
+        elif green_ratio > 0.15 and yellow_ratio < 0.10 and bright_red_ratio < 0.06:
+            optically_detected = "guava"
+
+        if optically_detected and f_hint and optically_detected != f_hint:
+            return {
+                "status": "mismatch",
+                "detected_fruit": optically_detected,
+                "dominant_stage": "mismatch",
+                "count": 0,
+                "message": f"⚠️ PRODUCT MISMATCH DETECTED: You scanned a {optically_detected.capitalize()} but selected {f_hint.capitalize()} in the dropdown."
             }
 
         if f_hint in ("cabbage", "cucumber", "capsicum", "ladyfinger"):

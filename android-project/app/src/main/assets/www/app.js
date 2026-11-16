@@ -1355,13 +1355,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return { state: "mismatch", detectedFruit: "potato", message: "⚠️ PRODUCT MISMATCH DETECTED: Earthy tan Potato tuber profile detected instead of " + fruit.toUpperCase() + ". Switching to Potato." };
             }
 
-            // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN / SELFIE DETECTION
+            // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
             let humanSkinPixels = 0;
             for (let pIdx = 0; pIdx < W * H; pIdx++) {
                 if (!fgMask[pIdx]) continue;
                 const idx = pIdx * 4;
                 const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2];
-                // YCbCr skin model + RGB skin chromaticity
                 const y = 0.299 * r + 0.587 * g + 0.114 * b;
                 const cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 128;
                 const cr = 0.5 * r - 0.418688 * g - 0.081312 * b + 128;
@@ -1372,11 +1371,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             const skinRatio = humanSkinPixels / Math.max(1, fruitPixelsCount);
-            // Real produce pigments (excluding skin-like ripeCount):
-            const pureProducePigments = greenCount + yellowCount + coolAppleRedCount + warmTomatoRedCount + orangeCount + purpleCount + moldCount + rottenCount + decomposedCount;
-            const pureProduceRatio = pureProducePigments / Math.max(1, fruitPixelsCount);
 
-            if ((fruit !== "potato" && skinRatio > 0.18) || (skinRatio > 0.35 && pureProduceRatio < 0.20)) {
+            // Confirm authentic produce pigments: Real fruits/veggies MUST NOT be flagged as human hand!
+            const hasRealProducePigments = (
+                yellowCount > fruitPixelsCount * 0.08 ||
+                orangeCount > fruitPixelsCount * 0.08 ||
+                greenCount > fruitPixelsCount * 0.08 ||
+                coolAppleRedCount > fruitPixelsCount * 0.08 ||
+                warmTomatoRedCount > fruitPixelsCount * 0.08 ||
+                purpleCount > fruitPixelsCount * 0.08 ||
+                tanPotatoCount > fruitPixelsCount * 0.12
+            );
+
+            // Only trigger human hand if there are NO produce pigments and skin dominates
+            if (!hasRealProducePigments && skinRatio > 0.28) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
@@ -1422,6 +1430,37 @@ document.addEventListener("DOMContentLoaded", () => {
                     isInvalidObject: true,
                     objectType: "empty",
                     message: "⚠️ NO PRODUCE DETECTED: The camera frame does not contain a recognized fruit or vegetable. Please align produce to the scanner."
+                };
+            }
+
+            
+            // 🥕 OPTICAL PRODUCE CLASSIFIER (Auto-detects actual vegetable/fruit in frame regardless of dropdown)
+            let opticallyDetected = null;
+            if (orangeCount > fruitPixelsCount * 0.20) {
+                opticallyDetected = "carrot";
+            } else if (coolAppleRedCount > fruitPixelsCount * 0.16 || blushRedCount > fruitPixelsCount * 0.22) {
+                opticallyDetected = "apple";
+            } else if (warmTomatoRedCount > fruitPixelsCount * 0.20 || (redCount > fruitPixelsCount * 0.22 && orangeCount > fruitPixelsCount * 0.08)) {
+                opticallyDetected = "tomato";
+            } else if (purpleCount > fruitPixelsCount * 0.16) {
+                opticallyDetected = "brinjal";
+            } else if (tanPotatoCount > fruitPixelsCount * 0.14 && yellowCount < fruitPixelsCount * 0.06 && redCount < fruitPixelsCount * 0.06) {
+                opticallyDetected = "potato";
+            } else if (yellowCount > fruitPixelsCount * 0.20 || brightYellowCount > fruitPixelsCount * 0.12) {
+                opticallyDetected = "banana";
+            } else if (greenCount > fruitPixelsCount * 0.12 && yellowCount < fruitPixelsCount * 0.10 && redCount < fruitPixelsCount * 0.06 && orangeCount < fruitPixelsCount * 0.06) {
+                opticallyDetected = "guava";
+            } else if (whiteCount > fruitPixelsCount * 0.22 && redCount < fruitPixelsCount * 0.08) {
+                opticallyDetected = "radish";
+            }
+
+            if (opticallyDetected && opticallyDetected !== fruit) {
+                const prettyDet = opticallyDetected.charAt(0).toUpperCase() + opticallyDetected.slice(1);
+                const prettySel = fruit.charAt(0).toUpperCase() + fruit.slice(1);
+                return {
+                    state: "mismatch",
+                    detectedFruit: opticallyDetected,
+                    message: "⚠️ PRODUCT MISMATCH DETECTED: You scanned a " + prettyDet + " but selected " + prettySel + " in the dropdown."
                 };
             }
 
@@ -2626,22 +2665,38 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 return;
             }
             // 🤖 Auto AI Mode: If a different produce is optically recognized, automatically switch to it!
-            if (isAutoMode && analysis.detectedFruit && analysis.detectedFruit.toLowerCase() !== selectedFruit.toLowerCase()) {
+            // 1. If invalid object (hand, electronic, empty frame), block immediately!
+            if (analysis.isInvalidObject) {
+                displayMismatch(analysis.message);
+                return;
+            }
+
+            // 2. Optical Auto-Switch for produce mismatch:
+            if (analysis.detectedFruit && analysis.detectedFruit.toLowerCase() !== selectedFruit.toLowerCase()) {
                 const newFruit = analysis.detectedFruit.toLowerCase();
-                fruitSelect.value = newFruit;
-                updateFreshnessGuideForFruit(newFruit);
-                // Re-run freshness scan immediately with the optically detected fruit!
-                analysis = analyzeImageColor();
-                if (analysis && analysis.state !== "mismatch") {
-                    selectedState = (analysis && typeof analysis === "object") ? analysis.state : analysis;
-                    const bunchData = (analysis && typeof analysis === "object") ? {
-                        isBunch: !!analysis.isBunch,
-                        totalCount: analysis.totalCount || 1,
-                        breakdown: analysis.breakdown || null,
-                        actionTip: analysis.actionTip || null,
-                        items: analysis.items || []
-                    } : null;
-                    displayScanResult(newFruit, selectedState, getStageDescription(newFruit, selectedState), bunchData);
+                if (isAutoMode) {
+                    console.log(`🤖 Optical Auto-Switch: Switching from ${selectedFruit} to ${newFruit}...`);
+                    fruitSelect.value = newFruit;
+                    updateFreshnessGuideForFruit(newFruit);
+                    // Re-run scan with detected produce!
+                    analysis = analyzeImageColor();
+                    if (analysis && analysis.state !== "mismatch") {
+                        selectedState = (analysis && typeof analysis === "object") ? analysis.state : analysis;
+                        const bunchData = (analysis && typeof analysis === "object") ? {
+                            isBunch: !!analysis.isBunch,
+                            totalCount: analysis.totalCount || 1,
+                            breakdown: analysis.breakdown || null,
+                            actionTip: analysis.actionTip || null,
+                            items: analysis.items || []
+                        } : null;
+                        displayScanResult(newFruit, selectedState, getStageDescription(newFruit, selectedState), bunchData);
+                        const prettyDet = newFruit.charAt(0).toUpperCase() + newFruit.slice(1);
+                        const prettyOrig = selectedFruit.charAt(0).toUpperCase() + selectedFruit.slice(1);
+                        resDesc.innerHTML = `<span style="color:#2e7d32; font-weight:700;">✅ Optical Auto-Switch:</span> Scanned image recognized as <b>${prettyDet}</b> (Dropdown was ${prettyOrig}). Analyzed freshness for <b>${prettyDet}</b>.<br><br>` + resDesc.innerText;
+                        return;
+                    }
+                } else {
+                    displayMismatch(analysis.message);
                     return;
                 }
             }
