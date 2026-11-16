@@ -354,6 +354,32 @@ class FruitFreshnessDetector:
         skin_mask = (((h >= 5) & (h <= 24)) & (s >= 20) & (s <= 80) & (v >= 65) & not_blue_mask)
         skin_ratio = float(skin_mask.sum() / valid_area)
 
+        # 🛑 PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
+        if (f_hint != "potato" and skin_ratio > 0.18) or (skin_ratio > 0.38):
+            return {
+                "status": "mismatch",
+                "detected_fruit": "human_hand",
+                "dominant_stage": "invalid",
+                "count": 0,
+                "message": "⚠️ HUMAN HAND DETECTED: A human hand or skin was detected in the camera frame. Please place a real fruit or vegetable in front of the camera."
+            }
+
+        # 🛑 PRODUCE GATEKEEPER 2: MOBILE PHONE / ELECTRONIC DEVICE DETECTION
+        dark_glass_mask = (v < 55) & (s < 30) & not_blue_mask
+        lit_screen_mask = (image_bgr[:, :, 0] > 105) & (image_bgr[:, :, 0] > image_bgr[:, :, 2] + 12) & (s < 45) & not_blue_mask
+        metallic_mask = (s < 20) & not_blue_mask
+        electronic_ratio = float((dark_glass_mask | lit_screen_mask | metallic_mask).sum() / valid_area)
+        produce_ratio = float((bright_red_mask | yellow_mask | green_mask).sum() / valid_area)
+
+        if (electronic_ratio > 0.45 and produce_ratio < 0.12) or (electronic_ratio > 0.65):
+            return {
+                "status": "mismatch",
+                "detected_fruit": "electronics",
+                "dominant_stage": "invalid",
+                "count": 0,
+                "message": "⚠️ ELECTRONIC DEVICE DETECTED: A mobile phone or electronic device was detected in frame. Please scan a real biological fruit or vegetable."
+            }
+
         if f_hint in ("cabbage", "cucumber", "capsicum", "ladyfinger"):
             if green_ratio < 0.05 and black_decay_ratio < 0.06:
                 return {

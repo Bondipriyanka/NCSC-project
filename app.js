@@ -667,7 +667,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         rottenCount++;
                     } else if (r >= 135 && r < 170 && g >= 50 && g < 95 && b < 55 && r > g + 45) {
                         overripeCount++;
-                    } else if (r >= 160 && g >= 68 && g <= 195 && b < 95 && r > g + 22 && r > b + 65) {
+                    } else if (!isSkin && r >= 160 && g >= 68 && g <= 195 && b < 95 && r > g + 22 && r > b + 65) {
                         ripeCount++;
                     } else if (r >= 135 && g >= 115 && b < 95) {
                         ripeningCount++;
@@ -684,7 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         rottenCount++;
                     } else if (r >= 95 && r < 175 && g >= 55 && g < 130 && b < 80 && r > g + 16 && (g - b) < 18) {
                         overripeCount++;
-                    } else if ((r >= 145 && g >= 120 && b < 135 && r >= g - 6 && (r - b) > 38) || (!fn && r >= 155 && g >= 75 && b < 110 && (g - b) >= 18 && (r - b) >= 45)) {
+                    } else if (!isSkin && ((r >= 145 && g >= 120 && b < 135 && r >= g - 6 && (r - b) > 38) || (!fn && r >= 155 && g >= 75 && b < 110 && (g - b) >= 18 && (r - b) >= 45))) {
                         ripeCount++;
                     } else if (r >= 110 && g >= 125 && b < 110 && g > r && (g - r) <= 16) {
                         ripeningCount++;
@@ -707,7 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         decomposedCount++;
                     } else if (inItemCore && !isDeskOrShadow && (isBlueGreenMold || (r >= 38 && r < 145 && g >= 22 && g < 95 && b < 72 && (r - g) >= 5 && (r - g) <= 34 && b <= g + 8))) {
                         rottenCount++;
-                    } else if (((fruit === "apple" ? r >= 65 : r >= 112) && r > g + 14 && r > b + 10 && g < 165) || (r >= 140 && g >= 120 && b < 138 && r >= g - 10)) {
+                    } else if (!isSkin && (((fruit === "apple" ? r >= 65 : r >= 112) && r > g + 14 && r > b + 10 && g < 165) || (r >= 140 && g >= 120 && b < 138 && r >= g - 10))) {
                         ripeCount++;
                     } else if (r > 105 && g >= 75 && b < 115 && r >= g - 10) {
                         ripeningCount++;
@@ -718,7 +718,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 } else if (fruit === "mango") {
                     if (inItemCore && r < 42 && g < 42 && b < 42) decomposedCount++;
-                    else if ((r >= 135 && g >= 95 && b < 165 && r >= g - 5 && r > b + 15) || (r >= 85 && r > g + 20 && r > b + 10 && g >= 25 && b < 135)) ripeCount++;
+                    else if (!isSkin && ((r >= 135 && g >= 95 && b < 165 && r >= g - 5 && r > b + 15) || (r >= 85 && r > g + 20 && r > b + 10 && g >= 25 && b < 135))) ripeCount++;
                     else if (r > 115 && g > 115 && b < 120) ripeningCount++;
                     else if (g > r + 5 && g > b) matureCount++;
                     else if (inItemCore && r >= 82 && r < 142 && g >= 58 && g < 105 && b < 68 && (r - g) >= 10 && (r - g) <= 26) overripeCount++;
@@ -1272,24 +1272,73 @@ document.addEventListener("DOMContentLoaded", () => {
                 return { state: "mismatch", detectedFruit: "potato", message: "⚠️ PRODUCT MISMATCH DETECTED: Earthy tan Potato tuber profile detected instead of " + fruit.toUpperCase() + ". Switching to Potato." };
             }
 
-            // 👤 Human Face / Person / Selfie Filter: Reject human faces, selfies, or people in camera
+            // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN / SELFIE DETECTION
             let humanSkinPixels = 0;
             for (let pIdx = 0; pIdx < W * H; pIdx++) {
                 if (!fgMask[pIdx]) continue;
                 const idx = pIdx * 4;
                 const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2];
-                if (r > 90 && g > 60 && b > 45 && r > g && g >= b && (r - g) >= 12 && (r - g) <= 75 && (g - b) >= 4 && (g - b) <= 55 && (r - b) >= 18 && (r - b) <= 95) {
+                // YCbCr skin model + RGB skin chromaticity
+                const y = 0.299 * r + 0.587 * g + 0.114 * b;
+                const cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 128;
+                const cr = 0.5 * r - 0.418688 * g - 0.081312 * b + 128;
+                const isSkinYCbCr = (y >= 70 && cr >= 135 && cr <= 175 && cb >= 77 && cb <= 127);
+                const isSkinRGB = (r >= 95 && g >= 60 && b >= 35 && r > g && g >= b && (r - g) >= 12 && (r - g) <= 80 && (g - b) >= 4 && (g - b) <= 60 && (r - b) >= 18 && (r - b) <= 100);
+                if (isSkinYCbCr && isSkinRGB) {
                     humanSkinPixels++;
                 }
             }
             const skinRatio = humanSkinPixels / Math.max(1, fruitPixelsCount);
-            const totalProduceChroma = greenCount + yellowCount + redCount + orangeCount + purpleCount + ripeCount;
-            const chromaRatio = totalProduceChroma / Math.max(1, fruitPixelsCount);
+            // Real produce pigments (excluding skin-like ripeCount):
+            const pureProducePigments = greenCount + yellowCount + coolAppleRedCount + warmTomatoRedCount + orangeCount + purpleCount + moldCount + rottenCount + decomposedCount;
+            const pureProduceRatio = pureProducePigments / Math.max(1, fruitPixelsCount);
 
-            if ((skinRatio > 0.18 && chromaRatio < 0.25) || (skinRatio > 0.28 && chromaRatio < 0.35)) {
+            if ((fruit !== "potato" && skinRatio > 0.18) || (skinRatio > 0.35 && pureProduceRatio < 0.20)) {
                 return {
                     state: "mismatch",
-                    message: "⚠️ NO PRODUCE DETECTED (Human / Face in View): Please align an actual fruit or vegetable to the camera."
+                    isInvalidObject: true,
+                    objectType: "human_hand",
+                    message: "⚠️ HUMAN HAND DETECTED: A human hand or skin was detected in the camera frame. Please place an actual fruit or vegetable in view to test freshness."
+                };
+            }
+
+            // 🛑 AI PRODUCE GATEKEEPER 2: MOBILE PHONE / ELECTRONIC DEVICE DETECTION
+            let electronicPixels = 0;
+            for (let pIdx = 0; pIdx < W * H; pIdx++) {
+                if (!fgMask[pIdx]) continue;
+                const idx = pIdx * 4;
+                const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2];
+                const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+                // Dark glass screen / dark plastic bezel
+                const isDarkGlass = (r < 70 && g < 70 && b < 70 && chroma <= 16);
+                // Glowing digital display / blue-heavy LED screen
+                const isLitScreen = (b >= 100 && (b - r) >= 20 && (b - g) >= 10);
+                // White digital UI / browser / document on screen
+                const isWhiteDigitalUI = (r > 190 && g > 190 && b > 190 && chroma <= 14);
+                // Matte aluminum / grey plastic gadget surface
+                const isMetallicGadget = (chroma <= 16 && r >= 65 && r <= 190 && Math.abs(r - g) <= 12 && Math.abs(g - b) <= 12);
+
+                if (isDarkGlass || isLitScreen || isWhiteDigitalUI || isMetallicGadget) {
+                    electronicPixels++;
+                }
+            }
+            const electronicRatio = electronicPixels / Math.max(1, fruitPixelsCount);
+            if ((electronicRatio > 0.45 && pureProduceRatio < 0.12) || (electronicRatio > 0.60)) {
+                return {
+                    state: "mismatch",
+                    isInvalidObject: true,
+                    objectType: "electronic_device",
+                    message: "⚠️ ELECTRONIC DEVICE DETECTED: A mobile phone or electronic device was detected in the camera frame. Please scan a real biological fruit or vegetable."
+                };
+            }
+
+            // 🛑 AI PRODUCE GATEKEEPER 3: EMPTY FRAME / NON-PRODUCE INANIMATE OBJECT
+            if (fruitPixelsCount < 180 || (pureProduceRatio < 0.05 && skinRatio < 0.10 && electronicRatio < 0.30 && tanPotatoCount < 50)) {
+                return {
+                    state: "mismatch",
+                    isInvalidObject: true,
+                    objectType: "empty",
+                    message: "⚠️ NO PRODUCE DETECTED: The camera frame does not contain a recognized fruit or vegetable. Please align produce to the scanner."
                 };
             }
 
@@ -2473,6 +2522,11 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
 
         let analysis = analyzeImageColor();
         if (analysis && typeof analysis === "object" && analysis.state === "mismatch") {
+            const msg = analysis.message || "";
+            if (msg.includes("HUMAN HAND") || msg.includes("ELECTRONIC") || msg.includes("NO PRODUCE") || msg.includes("Human") || analysis.isInvalidObject) {
+                displayMismatch(msg);
+                return;
+            }
             // 🤖 Auto AI Mode: If a different produce is optically recognized, automatically switch to it!
             if (isAutoMode && analysis.detectedFruit && analysis.detectedFruit.toLowerCase() !== selectedFruit.toLowerCase()) {
                 const newFruit = analysis.detectedFruit.toLowerCase();
@@ -2524,10 +2578,20 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
         if (bunchActionTip) bunchActionTip.style.display = "none";
         clearDetectionOverlay();
 
-        resValue.innerText = "FRUIT MISMATCH ⚠️";
+        if (mismatchMessage.includes("HUMAN HAND") || mismatchMessage.includes("Human") || mismatchMessage.includes("hand")) {
+            resValue.innerText = "HUMAN HAND DETECTED ✋";
+            resShelf.innerText = "Human Skin / Non-Produce";
+        } else if (mismatchMessage.includes("ELECTRONIC") || mismatchMessage.includes("phone") || mismatchMessage.includes("device")) {
+            resValue.innerText = "ELECTRONICS DETECTED 📱";
+            resShelf.innerText = "Non-Produce Object";
+        } else if (mismatchMessage.includes("NO ") && mismatchMessage.includes("DETECTED")) {
+            resValue.innerText = "NO PRODUCE DETECTED 🔍";
+            resShelf.innerText = "Empty Frame";
+        } else {
+            resValue.innerText = "FRUIT MISMATCH ⚠️";
+            resShelf.innerText = "Scan Blocked";
+        }
         resValue.style.color = "var(--c-rot)";
-        
-        resShelf.innerText = "Scan Blocked";
         resShelf.style.backgroundColor = "rgba(244, 67, 54, 0.2)";
         resShelf.style.color = "var(--c-rot)";
 
