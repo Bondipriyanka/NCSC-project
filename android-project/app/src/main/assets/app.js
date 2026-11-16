@@ -1,6 +1,89 @@
 /* 🤖 NCSC PROJECT: SMART FRUITS & VEGETABLES DETECTOR DEMO LOGIC */
 
 document.addEventListener("DOMContentLoaded", () => {
+    // 🧠 Deep Learning Neural Network Engine (TensorFlow.js MobileNet V2)
+    let deepLearningModel = null;
+    let isDeepLearningReady = false;
+
+    async function loadDeepLearningEngine() {
+        if (typeof mobilenet === "undefined") {
+            console.warn("MobileNet library not loaded in window.");
+            return;
+        }
+        try {
+            console.log("🧠 Initializing Deep Learning Neural Engine (MobileNet V2)...");
+            // Try local offline model first
+            try {
+                deepLearningModel = await mobilenet.load({
+                    version: 2,
+                    alpha: 1.0,
+                    modelUrl: "models/mobilenet/model.json"
+                });
+                isDeepLearningReady = true;
+                console.log("✅ Deep Learning MobileNet V2 loaded OFFLINE from local assets!");
+            } catch (localErr) {
+                console.warn("Local modelUrl load failed, attempting standard load:", localErr);
+                deepLearningModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+                isDeepLearningReady = true;
+                console.log("✅ Deep Learning MobileNet V2 loaded successfully!");
+            }
+        } catch (e) {
+            console.warn("Deep Learning initialization error:", e);
+        }
+    }
+    loadDeepLearningEngine();
+
+    function evaluateDeepLearningPredictions(predictions, selectedFruit) {
+        if (!predictions || !predictions.length) return null;
+
+        const TOY_WORDS = ['teddy', 'toy', 'doll', 'puppet', 'marionette', 'plush', 'stuffed'];
+        const ELEC_WORDS = ['cellular', 'cellphone', 'mobile phone', 'telephone', 'laptop', 'notebook', 'screen', 'monitor', 'television', 'mouse', 'keyboard', 'modem', 'remote', 'hand-held', 'ipod'];
+        const HOUSEHOLD_WORDS = ['cup', 'mug', 'coffee mug', 'water bottle', 'pill bottle', 'plate', 'bowl', 'fork', 'knife', 'spoon', 'shoe', 'boot', 'sandal', 'sneaker', 'sock', 'glove', 'jersey', 'shirt', 't-shirt', 'suit', 'jacket', 'coat', 'jean', 'pants', 'dress', 'wallet', 'purse', 'backpack', 'bag', 'watch', 'clock', 'chair', 'table', 'desk', 'couch', 'sofa', 'bed', 'pillow', 'blanket', 'curtain', 'rug', 'car', 'vehicle', 'wheel', 'bicycle', 'motorcycle', 'pen', 'pencil', 'book', 'envelope', 'box', 'carton'];
+
+        for (const p of predictions) {
+            const name = p.className.toLowerCase();
+            const prob = p.probability;
+
+            for (const w of TOY_WORDS) {
+                if (name.includes(w) && prob >= 0.08) {
+                    return {
+                        type: 'toy',
+                        message: '⚠️ NON-PRODUCE DETECTED (Toy / Doll): Deep Learning MobileNet identified a ' + p.className + ' (' + Math.round(prob * 100) + '% confidence). Please scan a real fruit or vegetable.'
+                    };
+                }
+            }
+            for (const w of ELEC_WORDS) {
+                if (name.includes(w) && prob >= 0.10) {
+                    return {
+                        type: 'electronics',
+                        message: '⚠️ ELECTRONIC DEVICE DETECTED: Deep Learning MobileNet identified a ' + p.className + ' (' + Math.round(prob * 100) + '% confidence). Please scan a real fruit or vegetable.'
+                    };
+                }
+            }
+            for (const w of HOUSEHOLD_WORDS) {
+                if (name.includes(w) && prob >= 0.15) {
+                    return {
+                        type: 'household',
+                        message: '⚠️ NON-PRODUCE DETECTED (' + p.className.split(',')[0] + '): Deep Learning MobileNet detected an inanimate object (' + Math.round(prob * 100) + '% confidence). Please scan real produce.'
+                    };
+                }
+            }
+        }
+
+        // Fruit mismatch check
+        const top = predictions[0];
+        const topName = top.className.toLowerCase();
+        if (selectedFruit === 'potato' && (topName.includes('banana') || topName.includes('apple') || topName.includes('orange')) && top.probability >= 0.35) {
+            const det = topName.includes('banana') ? 'Banana' : (topName.includes('apple') ? 'Apple' : 'Orange');
+            return {
+                type: 'mismatch',
+                message: '⚠️ PRODUCT MISMATCH DETECTED: Deep Learning MobileNet identified a ' + det + ' (' + Math.round(top.probability * 100) + '% confidence), but Potato is selected in the dropdown.'
+            };
+        }
+
+        return null;
+    }
+
     // Detect mobile mode
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("mode") === "mobile" || window.location.search.includes("mode=mobile")) {
@@ -2450,6 +2533,21 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             const source = uploadedImage.style.display === "block" && uploadedImage.src
                 ? uploadedImage
                 : (video.style.display === "block" && localStream ? video : null);
+            // 🧠 STAGE 1: DEEP LEARNING OBJECT GATEKEEPER (MobileNet Neural Net)
+            if (source && isDeepLearningReady && deepLearningModel) {
+                try {
+                    const predictions = await deepLearningModel.classify(source, 5);
+                    console.log("🤖 Deep Learning MobileNet Predictions:", predictions);
+                    const rejection = evaluateDeepLearningPredictions(predictions, selectedFruit);
+                    if (rejection) {
+                        displayMismatch(rejection.message);
+                        return;
+                    }
+                } catch (dlErr) {
+                    console.warn("MobileNet classification skipped:", dlErr);
+                }
+            }
+
 
             if (source) {
                 const canvas = document.createElement("canvas");
@@ -2578,7 +2676,10 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
         if (bunchActionTip) bunchActionTip.style.display = "none";
         clearDetectionOverlay();
 
-        if (mismatchMessage.includes("HUMAN HAND") || mismatchMessage.includes("Human") || mismatchMessage.includes("hand")) {
+        if (mismatchMessage.includes("NON-PRODUCE") || mismatchMessage.includes("Toy") || mismatchMessage.includes("Doll") || mismatchMessage.includes("teddy")) {
+            resValue.innerText = "NON-PRODUCE DETECTED 🧸";
+            resShelf.innerText = "Toy / Inanimate Object";
+        } else if (mismatchMessage.includes("HUMAN HAND") || mismatchMessage.includes("Human") || mismatchMessage.includes("hand")) {
             resValue.innerText = "HUMAN HAND DETECTED ✋";
             resShelf.innerText = "Human Skin / Non-Produce";
         } else if (mismatchMessage.includes("ELECTRONIC") || mismatchMessage.includes("phone") || mismatchMessage.includes("device")) {

@@ -89,6 +89,13 @@ class FruitFreshnessDetector:
                 except Exception:
                     continue
 
+                if label in ("teddy bear", "cell phone", "laptop", "remote", "cup", "bottle", "backpack", "handbag", "suitcase", "sports ball", "book", "clock", "chair", "couch", "potted plant"):
+                    return [{
+                        "is_invalid": True,
+                        "label": label,
+                        "message": f"⚠️ NON-PRODUCE DETECTED ({label.title()}): YOLOv8 Neural Net detected a {label.title()}. Please scan a real fruit or vegetable."
+                    }]
+
                 if label not in FRUIT_OPTIONS and label != "fruit":
                     continue
 
@@ -346,8 +353,16 @@ class FruitFreshnessDetector:
         f_hint = (fruit_hint or "").lower().strip()
 
         # Run YOLO on COCO-trained classes only (exclude potato/vegetables where YOLO hallucinates apple boxes)
-        use_yolo = (self.yolo_model is not None and (not f_hint or f_hint in ("banana", "apple", "orange", "carrot")))
+        use_yolo = (self.yolo_model is not None and (not f_hint or f_hint in ("banana", "apple", "orange", "carrot", "potato")))
         detections = self.detect_with_yolo(image_bgr) if use_yolo else []
+        if detections and detections[0].get("is_invalid"):
+            return {
+                "status": "mismatch",
+                "detected_fruit": detections[0]["label"],
+                "dominant_stage": "invalid",
+                "count": 0,
+                "message": detections[0]["message"]
+            }
 
         # ⚠️ PRODUCE EXISTENCE VERIFICATION:
         # Prevent scanning human faces, room walls, or non-produce objects
