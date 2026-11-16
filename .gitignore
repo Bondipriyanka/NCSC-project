@@ -1,0 +1,22 @@
+# Python virtual environments & bytecode
+.venv/
+Include/
+Lib/
+Scripts/
+share/
+pyvenv.cfg
+__pycache__/
+*.pyc
+
+# Gradle / Android build outputs
+.gradle/
+android-project/.gradle/
+android-project/app/build/
+android-project/.idea/
+local.properties
+.idea/
+
+# OS / Editor temporary files
+Thumbs.db
+.DS_Store
+*.log

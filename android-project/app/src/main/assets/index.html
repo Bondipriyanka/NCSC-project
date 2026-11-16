@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCSC Project 2026 - Smart Freshness Detection App Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=2.5">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2e7d32">
+</head>
+<body>
+    <!-- 🌟 Glowing background aesthetic circles -->
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <!-- 🏷️ Header Block -->
+    <header>
+        <h1>NCSC PROJECT — SMART FRUITS & VEGETABLES FRESHNESS DETECTION</h1>
+        <p>National Children's Science Congress 2026 • Theme: Science for Sustainable Development • Focal Sub-theme: Technological Innovation</p>
+    </header>
+
+    <!-- 📦 Main Dashboard Grid (Mimicking Display Board) -->
+    <div class="dashboard-grid">
+
+        <!-- ==================== LEFT COLUMN ==================== -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Panel 1: Freshness Level Guide -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">1</span>
+                    <h3>Freshness Level Guide (Colour Code)</h3>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">Click any level to test instantly on the phone scanner:</p>
+                <div class="scale-container">
+                    <div class="scale-item active" data-state="raw">
+                        <div class="scale-dot dot-raw"></div>
+                        <div class="scale-details">
+                            <h4>Stage 1: Immature / Raw</h4>
+                            <p>Small, dark green, hard, smooth skin, attached to the tree.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="mature">
+                        <div class="scale-dot dot-mature"></div>
+                        <div class="scale-details">
+                            <h4>Stage 2: Mature Green</h4>
+                            <p>Full-sized, mostly green with a slight pink blush, firm.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="ripening">
+                        <div class="scale-dot dot-ripening"></div>
+                        <div class="scale-details">
+                            <h4>Stage 3: Ripening</h4>
+                            <p>Red color develops over the green background, crisp, increasing sweetness.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="ripe">
+                        <div class="scale-dot dot-ripe"></div>
+                        <div class="scale-details">
+                            <h4>Stage 4: Fresh / Peak Ripe</h4>
+                            <p>Bright deep red, smooth glossy skin, firm flesh, no bruises.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="overripe">
+                        <div class="scale-dot dot-overripe"></div>
+                        <div class="scale-details">
+                            <h4>Stage 5: Overripe</h4>
+                            <p>Slight wrinkles near the stem, dull skin, soft spots, minor brown patches.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="rotten">
+                        <div class="scale-dot dot-rotten"></div>
+                        <div class="scale-details">
+                            <h4>Stage 6: Rotten</h4>
+                            <p>Large brown/black soft areas, mold growth, leaking juice, fermented odor.</p>
+                        </div>
+                    </div>
+                    <div class="scale-item" data-state="decomposed">
+                        <div class="scale-dot dot-decomposed"></div>
+                        <div class="scale-details">
+                            <h4>Stage 7: Decomposed</h4>
+                            <p>Fruit collapsed, extensively mold-covered or blackened, tissue broken down.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Example Results on App -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">4</span>
+                    <h3>Example Results on App</h3>
+                </div>
+                <div class="tabs-container">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-fruit="apple">🍎 Apple</button>
+                        <button class="tab-btn" data-fruit="banana">🍌 Banana</button>
+                        <button class="tab-btn" data-fruit="guava">🍈 Guava</button>
+                        <button class="tab-btn" data-fruit="tomato">🍅 Tomato</button>
+                    </div>
+
+                    <div class="tab-content active" id="tab-apple">
+                        <div class="example-item-detail">
+                            <div class="example-img-mock">🍎</div>
+                            <div class="example-text">
+                                <h4>Apple (Fresh Stage)</h4>
+                                <p><strong>App Output:</strong> Stage 4: Fresh / Peak Ripe<br>Bright deep red, smooth glossy skin, firm flesh, no bruises.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="tab-banana">
+                        <div class="example-item-detail">
+                            <div class="example-img-mock">🍌</div>
+                            <div class="example-text">
+                                <h4>Banana Bunch (Mixed Condition)</h4>
+                                <p><strong>App Output:</strong> Detects multiple items in a bunch, pinpoints <strong>which exact item</strong> (Left/Center/Right) is Ripe vs. Rotten, & triggers Ethylene Quarantine Alert.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="tab-guava">
+                        <div class="example-item-detail">
+                            <div class="example-img-mock">🍈</div>
+                            <div class="example-text">
+                                <h4>Guava (Fresh Stage)</h4>
+                                <p><strong>App Output:</strong> Stage 4: Fresh / Peak Ripe<br>Light yellow-green firm skin, background blurred to isolate only the fruit.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="tab-tomato">
+                        <div class="example-item-detail">
+                            <div class="example-img-mock">🍅</div>
+                            <div class="example-text">
+                                <h4>Tomato (Rotten Stage)</h4>
+                                <p><strong>App Output:</strong> Stage 6: Rotten<br>Large brown/black soft areas, mold growth, leaking juice, fermented odor.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 7: Future Scope -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">7</span>
+                    <h3>Future Scope</h3>
+                </div>
+                <div class="scope-list">
+                    <div class="scope-card">
+                        <strong>Bulk Scanning:</strong> Scanning complete boxes of produce at once using high-speed warehouse cameras.
+                    </div>
+                    <div class="scope-card">
+                        <strong>Farmers Portal:</strong> A cloud dashboard for farmers to track fruit shelf life during truck transport.
+                    </div>
+                    <div class="scope-card">
+                        <strong>Dynamic Pricing Alerts:</strong> Automatically linking the app to digital discount boards to clear ripe stock fast.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== CENTER COLUMN (THE APP IN ACTION) ==================== -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Panel 2: Interactive App Workflow -->
+            <div class="panel scanner-panel">
+                <div class="panel-header" style="width: 100%;">
+                    <span class="badge">2</span>
+                    <h3>App Workflow — Interactive Demo</h3>
+                </div>
+
+                <!-- Smartphone Mockup -->
+                <div class="phone-mockup">
+                    <div class="phone-speaker"></div>
+                    <div class="phone-screen">
+                        
+                        <div class="app-bar" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button id="btn-app-back" type="button" style="display: none; background: rgba(46, 125, 50, 0.15); color: #1b5e20; border: 1px solid #81c784; border-radius: 14px; padding: 2px 8px; font-size: 0.68rem; font-weight: 700; cursor: pointer; align-items: center; gap: 4px; font-family: inherit;" title="Return to Live Camera Scanner">⬅ Back</button>
+                                <span>🟢 Freshness Detector AI</span>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button id="btn-open-history" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.95rem; display: flex; align-items: center; font-family: inherit;" title="View Database History">📋</button>
+                                <span>v2.9</span>
+                            </div>
+                        </div>
+
+                        <!-- Camera/Capture Viewport -->
+                        <div class="viewport-container">
+                            <div class="laser-line"></div>
+                            
+                            <!-- ⬅ Back to Live Camera Button (floats in top left whenever static preview or scan is active) -->
+                            <button id="btn-viewport-back" type="button" style="display: none; position: absolute; top: 10px; left: 10px; z-index: 21; background: rgba(20, 60, 35, 0.90); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 5px 10px; border-radius: 20px; font-size: 0.68rem; cursor: pointer; font-weight: 700; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); font-family: 'Plus Jakarta Sans', sans-serif;" title="Return to Live Camera Scanner">
+                                ⬅ Back to Camera
+                            </button>
+
+                            <!-- 🔄 Flip Camera Button (Back / Front, floats in top left) -->
+                            <button id="flip-camera-btn" type="button" style="display: none; position: absolute; top: 10px; left: 10px; z-index: 20; background: rgba(15, 51, 27, 0.85); color: #fff; border: 1px solid rgba(255,255,255,0.22); padding: 4px 9px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; font-weight: 600; align-items: center; gap: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); font-family: 'Plus Jakarta Sans', sans-serif;" title="Switch between Back and Front Camera">
+                                🔄 Back • Flip
+                            </button>
+
+                            <!-- ❌ Stop Camera Button (floats in top right) -->
+                            <button id="stop-camera-btn" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 20; background: rgba(229, 57, 53, 0.85); color: #fff; border: none; padding: 4px 8px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 3px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); font-family: 'Plus Jakarta Sans', sans-serif;">
+                                ❌ Turn Off
+                            </button>
+                            
+                            <video id="camera-video" autoplay playsinline style="display: none;"></video>
+                            <img id="uploaded-image" alt="Upload preview" style="display: none;">
+                            <canvas id="detection-overlay" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 12;"></canvas>
+                            
+                            <div class="placeholder-ui">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"></path>
+                                </svg>
+                                <span>Tap here to start Webcam<br>or upload an image below</span>
+                            </div>
+                        </div>
+
+                        <!-- Result Display Output -->
+                        <div class="app-result-card">
+                            <span class="app-result-title">Freshness Level</span>
+                            <div class="app-result-value" id="res-value" style="color: var(--text-secondary);">READY TO SCAN</div>
+                            <div>
+                                <span class="app-result-shelf" id="res-shelf" style="background: #bed6c5; color: var(--text-primary); font-weight: 500;">Waiting for Input</span>
+                            </div>
+                            <div id="single-condition-badge" style="display: none; margin: 5px auto 2px auto; font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 10px;"></div>
+
+                            <!-- 🔬 Dual Definition Mode Segmented Selector (Scientific vs Simple Mode) -->
+                            <div class="def-mode-selector" style="margin: 6px auto 6px auto; display: inline-flex; justify-content: center; gap: 3px; background: #e8f5e9; padding: 3px 4px; border-radius: 20px; border: 1px solid #81c784;">
+                                <button id="btn-def-sci" type="button" class="def-pill-btn active" style="border: none; background: #2e7d32; color: #ffffff; padding: 4px 10px; border-radius: 14px; font-size: 0.68rem; font-weight: 700; cursor: pointer; transition: all 0.2s;" title="Detailed Scientific Analysis (ChatGPT style)">🔬 Scientific Definition</button>
+                                <button id="btn-def-simple" type="button" class="def-pill-btn" style="border: none; background: transparent; color: #1b5e20; padding: 4px 8px; border-radius: 14px; font-size: 0.68rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Compact Fast Verdict">⚡ Simple Mode</button>
+                            </div>
+
+                            <!-- 🍌 Multi-Item / Bunch Breakdown Display -->
+                            <div id="bunch-breakdown-container" style="display: none; margin-top: 8px; width: 100%;">
+                                <div id="bunch-header" style="font-size: 0.72rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>📦 Batch Detected: <span id="bunch-count" style="color: var(--primary);">-- Items</span></span>
+                                    <span id="bunch-status-chip" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: rgba(46,125,50,0.1); color: var(--primary); font-weight: 600;">Batch Health</span>
+                                </div>
+                                <div id="bunch-chips" style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                                <div id="bunch-item-list" style="display: none; margin-top: 6px; display: flex; flex-direction: column; gap: 3px; text-align: left; max-height: 92px; overflow-y: auto;">
+                                    <!-- Per-item condition breakdown (which one from the bunch is Good vs Bad) -->
+                                </div>
+                                <div id="bunch-action-tip" style="display: none; margin-top: 7px; padding: 6px 10px; background: #fff3e0; border-left: 3px solid #ff9800; border-radius: 4px; font-size: 0.67rem; color: #e65100; text-align: left; line-height: 1.3;">
+                                    <!-- Ethylene hazard / segregation recommendation -->
+                                </div>
+                            </div>
+
+                            <p class="app-result-desc" id="res-desc">Start the webcam or upload an image below, then click "Scan Freshness" to begin analysis.</p>
+
+                            <!-- 🔄 Retry / Scan Another Item Button -->
+                            <button id="retry-scan-btn" class="app-btn" type="button" style="display: none; width: 100%; margin-top: 8px; padding: 6px 12px; font-size: 0.75rem; background: #374151; color: #ffffff; border-radius: 6px; cursor: pointer; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                                🔄 Scan Again / Next Item
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 🔬 Expanded Scientific Quality Breakdown Card (Full View on Dashboard) -->
+                <div id="expanded-scientific-card" class="expanded-sci-card" style="width: 100%; max-width: 320px; margin: 12px auto 0 auto; background: #ffffff; border: 1.5px solid #81c784; border-radius: 14px; padding: 12px 14px; box-shadow: 0 4px 16px rgba(46, 125, 50, 0.08); box-sizing: border-box; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(46, 125, 50, 0.15);">
+                        <span style="font-size: 0.78rem; font-weight: 800; color: #1b5e20; display: flex; align-items: center; gap: 5px;">
+                            🔬 Biological Quality Analysis
+                        </span>
+                        <span id="sci-card-stage-pill" style="font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: #e8f5e9; color: #1b5e20;">Ready</span>
+                    </div>
+                    <div id="sci-card-body" style="font-size: 0.72rem; line-height: 1.45; color: #2e3e33;">
+                        Scan produce to inspect physiological maturity markers, ethylene evolution, starch-to-sugar hydrolyzation, and biochemical handling guidance.
+                    </div>
+                </div>
+
+                <!-- Mode Switcher -->
+                <div class="selection-row" style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-top: 15px;">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Scan Mode:</span>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="mode-auto" class="tab-btn active" style="padding: 4px 10px; font-size: 0.7rem;" type="button">🤖 Auto AI</button>
+                        <button id="mode-manual" class="tab-btn" style="padding: 4px 10px; font-size: 0.7rem;" type="button">⚙️ Manual</button>
+                    </div>
+                </div>
+
+                <!-- AI Engine Selector (Optional Online Gemini Vision) -->
+                <div class="selection-row" style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-top: 8px;">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: 4px;">
+                        AI Engine: 
+                        <span id="api-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+                    </span>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button id="engine-local" class="tab-btn active" style="padding: 4px 10px; font-size: 0.7rem;" type="button">🔒 Local Offline</button>
+                        <button id="engine-gemini" class="tab-btn" style="padding: 4px 10px; font-size: 0.7rem;" type="button">✨ Gemini Vision</button>
+                        <button id="btn-api-settings" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 2px 4px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;" title="Configure Gemini API Key" type="button">⚙️</button>
+                    </div>
+                </div>
+
+                <!-- Input Controls -->
+                <div class="selection-row" style="width: 100%;">
+                    <select class="app-select" id="fruit-select" title="Select item type">
+                        <option value="banana" selected>Banana 🍌</option>
+                        <option value="apple">Apple 🍎</option>
+                        <option value="mango">Mango 🥭</option>
+                        <option value="tomato">Tomato 🍅</option>
+                        <option value="orange">Orange 🍊</option>
+                        <option value="grape">Grapes 🍇</option>
+                        <option value="pineapple">Pineapple 🍍</option>
+                        <option value="ladyfinger">Ladyfinger 🥒</option>
+                        <option value="guava">Guava 🍈</option>
+                        <option value="radish">Radish 🥗</option>
+                        <option value="potato">Potato 🥔</option>
+                        <option value="carrot">Carrot 🥕</option>
+                        <option value="cucumber">Cucumber 🥒</option>
+                        <option value="cabbage">Cabbage 🥬</option>
+                        <option value="capsicum">Capsicum 🫑</option>
+                        <option value="brinjal">Brinjal 🍆</option>
+                    </select>
+
+                    <!-- Manual override dropdown (disabled/hidden in auto mode) -->
+                    <select class="app-select" id="state-select" title="Override freshness level" style="opacity: 0.5;" disabled>
+                        <option value="raw" selected>🟢 Stage 1: Raw</option>
+                        <option value="mature">🟢 Stage 2: Mature Green</option>
+                        <option value="ripening">🟡 Stage 3: Ripening</option>
+                        <option value="ripe">🟡 Stage 4: Fresh Ripe</option>
+                        <option value="overripe">🟠 Stage 5: Overripe</option>
+                        <option value="rotten">🟤 Stage 6: Rotten</option>
+                        <option value="decomposed">⚫ Stage 7: Decomposed</option>
+                    </select>
+                </div>
+
+                <div class="selection-row" style="width: 100%;">
+                    <label for="file-input" class="app-btn" style="background: #1b5e20; color: #ffffff; cursor: pointer; flex: 1;">
+                        📁 Upload Image
+                    </label>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    
+                    <button class="app-btn" id="scan-btn" style="background: #2e7d32; color: #ffffff; flex: 1.5;">
+                        ⚡ Scan Freshness
+                    </button>
+                </div>
+
+                <!-- 🧪 Curated 1-Click Field Test Cases -->
+                <div class="quick-test-bar">
+                    <div class="quick-test-header">
+                        <span class="quick-test-title">🧪 1-Tap Field Test Scenarios</span>
+                        <span style="font-size: 0.65rem; color: #555;">Ready for Validation</span>
+                    </div>
+                    <div class="quick-test-chips">
+                        <button type="button" class="test-chip-btn" data-fruit="banana" data-file="images/test_cases/sample_banana_ripe.jpg" title="Scan single fresh banana (1 whole fruit)">🍌 1 Banana (Single)</button>
+                        <button type="button" class="test-chip-btn" data-fruit="apple" data-file="images/test_cases/sample_single_apple.jpg" title="Scan single fresh apple">🍎 1 Apple (Single)</button>
+                        <button type="button" class="test-chip-btn" data-fruit="tomato" data-file="images/test_cases/sample_tomato.jpg" title="Scan single ripe tomato">🍅 1 Tomato (Single)</button>
+                        <button type="button" class="test-chip-btn" data-fruit="carrot" data-file="images/test_cases/sample_carrot.jpg" title="Scan single crisp fresh carrot">🥕 1 Carrot (Single)</button>
+                        <button type="button" class="test-chip-btn" data-fruit="potato" data-file="images/test_cases/sample_potato.jpg" title="Scan single good potato">🥔 1 Potato (Single)</button>
+                        <button type="button" class="test-chip-btn" data-fruit="tomato" data-file="images/test_cases/sample_two_tomatoes.jpg" title="Scan 2 fresh tomatoes side-by-side">🍅🍅 Group: 2 Tomatoes</button>
+                        <button type="button" class="test-chip-btn" data-fruit="banana" data-file="images/test_cases/tc3_banana_bunch_mixed.jpg" title="Scan mixed condition banana bunch">🍌🍌 Group: Banana Bunch</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Panel 6: System Diagram -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">6</span>
+                    <h3>System Diagram (Interactive Process Flow)</h3>
+                </div>
+                <div class="flow-diagram">
+                    <div class="flow-connector"></div>
+                    <div class="flow-step" id="step-input">
+                        <div class="flow-circle">📷</div>
+                        <p>Camera Input</p>
+                    </div>
+                    <div class="flow-step" id="step-process">
+                        <div class="flow-circle">🧠</div>
+                        <p>AI Process</p>
+                    </div>
+                    <div class="flow-step" id="step-level">
+                        <div class="flow-circle">🟢</div>
+                        <p>5-Level Check</p>
+                    </div>
+                    <div class="flow-step" id="step-result">
+                        <div class="flow-circle">📲</div>
+                        <p>App Output</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== RIGHT COLUMN ==================== -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Panel 3: Tools & Technologies -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">3</span>
+                    <h3>Tools & Technologies (Simple & Affordable)</h3>
+                </div>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <div class="tool-icon">🧩</div>
+                        <h4>MIT Inventor</h4>
+                        <p>App UI & Block Code</p>
+                    </div>
+                    <div class="tool-card">
+                        <div class="tool-icon">🧠</div>
+                        <h4>Teachable Machine</h4>
+                        <p>Google AI Classification</p>
+                    </div>
+                    <div class="tool-card">
+                        <div class="tool-icon">🔥</div>
+                        <h4>Firebase</h4>
+                        <p>History Logs Database</p>
+                    </div>
+                    <div class="tool-card">
+                        <div class="tool-icon">📷</div>
+                        <h4>Mobile Cam</h4>
+                        <p>Real-time Image Scans</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 5: Key Features -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">5</span>
+                    <h3>Key Features</h3>
+                </div>
+                <div class="features-list">
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>5-Stage color-coded freshness categorization</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>Automatic remaining shelf-life estimation</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>Smart recommendations (recipes for over-ripe items)</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>Completely offline scan capacity</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>Cloud Database sync for waste tracking (Firebase)</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✔</span>
+                        <span>Multi-Fruit & Bunch Batch Analysis with Ethylene Spoilage Warning</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 8: Specifications -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="badge">8</span>
+                    <h3>Specifications (Demo Prototype)</h3>
+                </div>
+                <div class="specs-list">
+                    <div class="spec-line">
+                        <span>Platform Support:</span>
+                        <strong>Android OS / Web App</strong>
+                    </div>
+                    <div class="spec-line">
+                        <span>AI Engine:</span>
+                        <strong>Image Classification CNN</strong>
+                    </div>
+                    <div class="spec-line">
+                        <span>Database Backend:</span>
+                        <strong>Firebase Realtime DB</strong>
+                    </div>
+                    <div class="spec-line">
+                        <span>Target Audience:</span>
+                        <strong>Local Vendors & Households</strong>
+                    </div>
+                    <div class="spec-line">
+                        <span>System Setup Cost:</span>
+                        <strong>₹0 (Uses entirely Free Tools)</strong>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== HISTORY LOG SECTION (REMOVED AND CONVERTED TO MODAL) ==================== -->
+    </div>
+
+    <!-- ⚙️ Gemini API Key Configuration Modal -->
+    <div id="api-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Gemini Vision Settings</h3>
+                <button id="modal-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4;">
+                    Input a free **Gemini API Key** to enable texture and advanced visual classification. Your key is stored locally in your browser and is never sent anywhere else.
+                </p>
+                <div class="input-group">
+                    <label for="input-api-key" style="font-size: 0.75rem; color: var(--text-primary); font-weight: 500; display: block; margin-bottom: 5px;">Gemini API Key:</label>
+                    <input type="password" id="input-api-key" placeholder="AIzaSy..." style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.7); color: var(--text-primary); font-size: 0.8rem;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-save-key" style="padding: 6px 15px; font-size: 0.75rem; border: none; background: var(--primary); color: #fff; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 Firebase Database History Modal -->
+    <div id="history-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="max-width: 600px; width: 95%;">
+            <div class="modal-header">
+                <h3>Firebase Database History Log</h3>
+                <button id="history-modal-close" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 380px; overflow-y: auto;">
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+                    This log displays the live synchronized scanner records stored in your Firebase Database.
+                </p>
+                <div class="log-table-container" style="border: 1px solid rgba(46, 125, 50, 0.08); background: #ffffff; border-radius: 8px;">
+                    <table class="log-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Scanned Fruit/Veg</th>
+                                <th>Freshness Status</th>
+                                <th>AI Prediction Accuracy</th>
+                                <th>Scan Time & Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-body">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 15px;">
+                <button id="clear-history-btn" style="background: rgba(244, 67, 54, 0.1); border: 1px solid var(--c-rot); color: var(--c-rot); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">
+                    🧹 Clear Database Log
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚙️ JavaScript Connection -->
+    <script src="app.js?v=2.8"></script>
+</body>
+</html>
