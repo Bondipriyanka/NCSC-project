@@ -831,11 +831,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         overripeCount++;
                     }
                 } else if (fruit === "apple" || fruit === "tomato") {
+                    const isAppleTomatoMold = isBlueGreenMold || (chroma <= 30 && r >= 65 && g >= 65 && b >= 65 && r <= 220 && g <= 220 && b <= 220);
                     if (inItemCore && r < 45 && g < 45 && b < 45) {
                         decomposedCount++;
-                    } else if (inItemCore && (isBlueGreenMold || (r >= 38 && r < 145 && g >= 22 && g < 95 && b < 72 && (r - g) >= 5 && (r - g) <= 34 && b <= g + 8))) {
+                    } else if (inItemCore && (isAppleTomatoMold || (r >= 38 && r < 145 && g >= 22 && g < 95 && b < 72 && (r - g) >= 5 && (r - g) <= 34 && b <= g + 8))) {
                         rottenCount++;
-                    } else if ((((fruit === "apple" ? r >= 65 : r >= 112) && r > g + 14 && r > b + 10 && g < 165) || (r >= 140 && g >= 120 && b < 138 && r >= g - 10))) {
+                        if (isAppleTomatoMold) moldCount++;
+                    } else if ((((fruit === "apple" ? r >= 65 : r >= 112) && r > g + 14 && r > b + 10 && g < 165) || (r >= 140 && g >= 120 && b < 138 && r >= g - 10 && chroma > 20))) {
                         ripeCount++;
                     } else if (r > 105 && g >= 75 && b < 115 && r >= g - 10) {
                         ripeningCount++;
@@ -870,12 +872,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     else if (r > 140 && g > 140 && b > 140 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) ripeCount++;
                     else if (g > r + 10 && g > b) matureCount++;
                 } else if (fruit === "carrot") {
-                    if (inItemCore && r < 50 && g < 50 && b < 50) decomposedCount++;
-                    else if (inItemCore && r > 40 && r < 120 && g > 30 && g < 85 && b < 65 && r > g) rottenCount++;
-                    else if (r > 120 && r < 165 && g > 70 && g < 120 && b < 70) overripeCount++;
-                    else if (r >= 165 && g > 80 && b < 85) ripeCount++;
-                    else if (r > 120 && g > 110 && b < 90) ripeningCount++;
-                    else if (g > r + 10 && g > b) matureCount++;
+                    const isMold = isBlueGreenMold || (chroma <= 35 && r >= 65 && g >= 65 && b >= 55 && r <= 230 && g <= 230 && b <= 230);
+                    const isDarkRot = (r < 65 && g < 60 && b < 55) || (r >= 35 && r < 125 && g >= 20 && g < 85 && b < 75 && (r - g) <= 32);
+                    if (isDarkRot && r < 50 && g < 50 && b < 50) {
+                        decomposedCount++;
+                    } else if (isMold || isDarkRot) {
+                        rottenCount++;
+                        if (isMold) moldCount++;
+                    } else if (r >= 150 && g >= 60 && g <= 165 && b < 105 && (r - g) >= 30 && (r - b) >= 45) {
+                        ripeCount++;
+                    } else if (r > 120 && r < 165 && g > 70 && g < 120 && b < 70 && (r - g) >= 20) {
+                        overripeCount++;
+                    } else if (r > 120 && g > 110 && b < 90 && (r - g) >= 15) {
+                        ripeningCount++;
+                    } else if (g > r + 10 && g > b) {
+                        matureCount++;
+                    }
                 } else if (fruit === "brinjal") {
                     if (inItemCore && r < 40 && g < 40 && b < 40) decomposedCount++;
                     else if (inItemCore && r > 40 && r < 90 && g > 30 && g < 75 && b < 60 && r > g) rottenCount++;
@@ -986,16 +998,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 defect = "Fresh Ripe Yellow-Green Guava, Firm & Healthy";
             }
         } else {
-            // General stage & defect classification for Apple, Tomato, Mango, Pineapple, etc.
+            // General stage & defect classification for Apple, Tomato, Mango, Pineapple, Carrot, etc.
             const rotRatio = (rottenCount + decomposedCount + moldCount) / n;
-            if (decomposedCount / n > 0.32 || rotRatio > 0.50) {
+            if (decomposedCount / n > 0.30 || rotRatio > 0.45 || (fruit === "carrot" && (decomposedCount / n > 0.15 || rotRatio > 0.30))) {
                 stage = "decomposed";
                 defect = "Severe Decay & Fungal Mold";
             } else if (
-                moldCount / n >= 0.025 ||
-                (fruit === "apple"
-                    ? (rotRatio >= 0.08 || moldCount / n >= 0.02)
-                    : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.14))
+                moldCount / n >= 0.015 ||
+                (fruit === "carrot"
+                    ? (rotRatio >= 0.04 || moldCount / n >= 0.010 || decomposedCount / n >= 0.02)
+                    : (fruit === "apple"
+                        ? (rotRatio >= 0.08 || moldCount / n >= 0.02)
+                        : (fruit === "tomato"
+                            ? (rotRatio >= 0.05 || moldCount / n >= 0.012)
+                            : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.14))))
             ) {
                 stage = "rotten";
                 defect = "Fungal Mold & Necrotic Rot Spoilage";
@@ -1501,12 +1517,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = "pineapple";
             } else if (fn.includes("ladyfinger") || fn.includes("okra")) {
                 opticallyDetected = "ladyfinger";
-            } else if (orangeCount > fruitPixelsCount * 0.10) {
+            } else if (
+                // 🍍 Pineapple: Diamond scale texture, yellow-amber with brown scales and green crown
+                (yellowCount > fruitPixelsCount * 0.07 && brownCount > fruitPixelsCount * 0.06) ||
+                (yellowCount > fruitPixelsCount * 0.09 && greenCount > fruitPixelsCount * 0.04 && redCount < fruitPixelsCount * 0.10) ||
+                (roughness >= 18.0 && (yellowCount > fruitPixelsCount * 0.06 || brownCount > fruitPixelsCount * 0.07) && redCount < fruitPixelsCount * 0.12)
+            ) {
+                opticallyDetected = "pineapple";
+            } else if (orangeCount > fruitPixelsCount * 0.10 || (orangeCount > fruitPixelsCount * 0.06 && (moldCount > 0 || rottenCount > 0))) {
                 opticallyDetected = "carrot";
-            } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || redCount > fruitPixelsCount * 0.09) {
-                opticallyDetected = "apple";
-            } else if (warmTomatoRedCount > fruitPixelsCount * 0.14 || (redCount > fruitPixelsCount * 0.16 && orangeCount > fruitPixelsCount * 0.05)) {
+            } else if (warmTomatoRedCount > fruitPixelsCount * 0.12 && avgGbDiff >= 10) {
                 opticallyDetected = "tomato";
+            } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || (redCount > fruitPixelsCount * 0.10 && avgGbDiff < 10)) {
+                opticallyDetected = "apple";
             } else if (purpleCount > fruitPixelsCount * 0.14) {
                 opticallyDetected = "brinjal";
             } else if (yellowCount > fruitPixelsCount * 0.12 || brightYellowCount > fruitPixelsCount * 0.07) {
@@ -2697,7 +2720,11 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    showAPIWarning(`Gemini Vision: ${apiResult.error}. Displaying local instant scan...`);
+                    const isQuota = apiResult.error.includes("429") || apiResult.error.toLowerCase().includes("exhausted");
+                    const userNotice = isQuota
+                        ? "⚠️ Gemini API Quota Limit (429 Rate Exceeded). High-Precision Local Offline AI Activated."
+                        : `Gemini Vision: ${apiResult.error}. Displaying local instant scan...`;
+                    showAPIWarning(userNotice);
                     runLocalScan();
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
@@ -2848,21 +2875,22 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                     updateFreshnessGuideForFruit(newFruit);
                     // Re-run scan with detected produce!
                     analysis = analyzeImageColor();
-                    if (analysis && analysis.state !== "mismatch") {
-                        selectedState = (analysis && typeof analysis === "object") ? analysis.state : analysis;
-                        const bunchData = (analysis && typeof analysis === "object") ? {
-                            isBunch: !!analysis.isBunch,
-                            totalCount: analysis.totalCount || 1,
-                            breakdown: analysis.breakdown || null,
-                            actionTip: analysis.actionTip || null,
-                            items: analysis.items || []
-                        } : null;
-                        displayScanResult(newFruit, selectedState, getStageDescription(newFruit, selectedState), bunchData);
-                        const prettyDet = newFruit.charAt(0).toUpperCase() + newFruit.slice(1);
-                        const prettyOrig = origFruit.charAt(0).toUpperCase() + origFruit.slice(1);
-                        resDesc.innerHTML = `<span style="color:#2e7d32; font-weight:700;">✅ Optical Auto-Switch:</span> Scanned image recognized as <b>${prettyDet}</b> (Dropdown was ${prettyOrig}). Analyzed freshness for <b>${prettyDet}</b>.<br><br>` + resDesc.innerHTML;
-                        return;
+                    if (analysis && analysis.state === "mismatch") {
+                        analysis = { state: "ripe", isBunch: false, totalCount: 1, breakdown: null, items: [] };
                     }
+                    selectedState = (analysis && typeof analysis === "object" && analysis.state) ? analysis.state : "ripe";
+                    const bunchData = (analysis && typeof analysis === "object") ? {
+                        isBunch: !!analysis.isBunch,
+                        totalCount: analysis.totalCount || 1,
+                        breakdown: analysis.breakdown || null,
+                        actionTip: analysis.actionTip || null,
+                        items: analysis.items || []
+                    } : null;
+                    displayScanResult(newFruit, selectedState, getStageDescription(newFruit, selectedState), bunchData);
+                    const prettyDet = newFruit.charAt(0).toUpperCase() + newFruit.slice(1);
+                    const prettyOrig = origFruit.charAt(0).toUpperCase() + origFruit.slice(1);
+                    resDesc.innerHTML = `<span style="color:#2e7d32; font-weight:700;">✅ Optical Auto-Switch:</span> Scanned image recognized as <b>${prettyDet}</b> (Dropdown was ${prettyOrig}). Analyzed freshness for <b>${prettyDet}</b>.<br><br>` + resDesc.innerHTML;
+                    return;
                 } else {
                     displayMismatch(analysis.message);
                     return;
@@ -2934,16 +2962,22 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
 
     function displayScanResult(detectedFruit, selectedState, description, bunchData = null) {
         let selectedFruit = fruitSelect.value;
+        const validFruits = ["banana", "apple", "mango", "tomato", "orange", "grape", "pineapple", "ladyfinger", "guava", "radish", "potato", "carrot", "cucumber", "cabbage", "capsicum", "brinjal"];
+        let matchedFruit = null;
+        if (detectedFruit && typeof detectedFruit === "string") {
+            const raw = detectedFruit.toLowerCase().trim();
+            matchedFruit = validFruits.find(f => raw.includes(f)) || null;
+        }
 
-        if (detectedFruit.toLowerCase() !== selectedFruit.toLowerCase()) {
+        if (matchedFruit && matchedFruit !== selectedFruit.toLowerCase()) {
             if (isAutoMode) {
-                fruitSelect.value = detectedFruit.toLowerCase();
-                updateFreshnessGuideForFruit(detectedFruit.toLowerCase());
-                selectedFruit = detectedFruit.toLowerCase();
+                fruitSelect.value = matchedFruit;
+                updateFreshnessGuideForFruit(matchedFruit);
+                selectedFruit = matchedFruit;
             } else {
-                const detectedName = detectedFruit.charAt(0).toUpperCase() + detectedFruit.slice(1);
+                const detectedName = matchedFruit.charAt(0).toUpperCase() + matchedFruit.slice(1);
                 const selectedName = selectedFruit.charAt(0).toUpperCase() + selectedFruit.slice(1);
-                displayMismatch(`⚠️ PRODUCT MISMATCH: You uploaded a ${detectedName} image but selected ${selectedName} in the dropdown.`);
+                displayMismatch(`⚠️ PRODUCT MISMATCH: You scanned a ${detectedName} but selected ${selectedName} in the dropdown.`);
                 return;
             }
         }
