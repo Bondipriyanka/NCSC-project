@@ -1382,10 +1382,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // 5. Analyze overall foreground for mismatch validation & fallback stage
             const overallAnalysis = analyzeRegionPixels(pixels, W, H, fgMask, fruit);
             const {
-                n: fruitPixelsCount, greenCount, yellowCount, redCount, orangeCount,
+                n: fruitPixelsCount, greenCount, yellowCount, brightYellowCount, redCount, orangeCount,
                 coolAppleRedCount, blushRedCount, warmTomatoRedCount, avgGbDiff,
-                purpleCount, whiteCount, brownCount, moldCount, solanineCount, sproutCount, tanPotatoCount,
-                rawCount, matureCount, ripeCount, ripeningCount, rottenCount, decomposedCount
+                purpleCount, whiteCount, brownCount, brownRotCount, moldCount, solanineCount, sproutCount, tanPotatoCount,
+                rawCount, matureCount, ripeCount, ripeningCount, overripeCount, rottenCount, decomposedCount
             } = overallAnalysis.counts;
 
             // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
@@ -2572,7 +2572,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
         
         const prompt = `You are an expert agricultural quality inspector and computer vision analyzer for fruit & vegetable freshness.
 Analyze this image of fruit(s) or vegetable(s).
@@ -2691,9 +2691,18 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    showAPIWarning(`Gemini API failed: ${apiResult.error}. Switching to local offline scanner...`);
-                    setActiveEngine("local");
-                    runLocalScan();
+                    showAPIWarning(`Gemini Vision: ${apiResult.error}`);
+                    resValue.innerText = "GEMINI ERROR ⚠️";
+                    resValue.style.color = "var(--c-rot)";
+                    resShelf.innerText = "API Error";
+                    resShelf.style.backgroundColor = "rgba(244, 67, 54, 0.2)";
+                    resShelf.style.color = "var(--c-rot)";
+                    resDesc.innerHTML = `<span style="color:#d32f2f; font-weight:700;">⚠️ Gemini Vision API Error:</span> ${apiResult.error}<br><br><small>To resolve: Check your Gemini API key (click ⚙️ next to Gemini Vision) or switch to 'Local Offline' if you want zero-network offline scanning.</small>`;
+                    phoneMockup.className = "phone-mockup res-rot";
+                    scannerPanel.className = "panel scanner-panel res-rot";
+                    if (retryScanBtn) retryScanBtn.style.display = "flex";
+                    showBackButtons(true);
+                    playBeep(220, 0.4);
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
                         isBunch: true,
