@@ -426,10 +426,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function acquireCameraStream(targetFacing, previousDeviceId) {
-        const attempts = [];
-        if (targetFacing) {
-            attempts.push({ video: { facingMode: targetFacing, width: { ideal: 640 }, height: { ideal: 480 } } });
-        }
+        const attempts = [
+            { video: { facingMode: { exact: targetFacing }, width: { ideal: 640 }, height: { ideal: 480 } } }
+        ];
+
         if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === "function") {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
@@ -443,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     if (matched && matched.deviceId) {
                         attempts.push({
-                            video: { deviceId: matched.deviceId, width: { ideal: 640 }, height: { ideal: 480 } }
+                            video: { deviceId: { exact: matched.deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
                         });
                     }
                 }
@@ -451,7 +451,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.warn("Device enumeration skipped:", enumErr);
             }
         }
-        attempts.push({ video: { width: { ideal: 640 }, height: { ideal: 480 } } });
+
+        attempts.push({ video: { facingMode: { ideal: targetFacing }, width: { ideal: 640 }, height: { ideal: 480 } } });
         attempts.push({ video: true });
 
         let lastErr = null;
@@ -474,10 +475,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             if (!facingOverride && localStream && localStream.active && localStream.getVideoTracks().some(t => t.readyState === "live")) {
                 video.srcObject = localStream;
-                video.muted = true;
-                video.playsInline = true;
-                video.setAttribute("playsinline", "");
-                video.setAttribute("muted", "");
                 video.style.display = "block";
                 uploadedImage.style.display = "none";
                 uploadedImage.removeAttribute("data-filename");
@@ -506,10 +503,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             video.srcObject = localStream;
-            video.muted = true;
-            video.playsInline = true;
-            video.setAttribute("playsinline", "");
-            video.setAttribute("muted", "");
             video.style.display = "block";
             uploadedImage.style.display = "none";
             uploadedImage.removeAttribute("data-filename");
@@ -520,9 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateFlipButtonLabel();
                 flipCameraBtn.style.display = "flex";
             }
-            await video.play().catch(playErr => {
-                console.warn("video.play() warning:", playErr);
-            });
+            await video.play().catch(() => {});
         } catch (err) {
             console.error("Camera access denied:", err);
             stopCamera();
@@ -544,68 +535,26 @@ document.addEventListener("DOMContentLoaded", () => {
         clearDetectionOverlay();
     }
 
-    // 📁 Image File Upload Handling
-    function handleSelectedImageFile(file) {
-        if (!file) return;
-        stopCamera();
-        clearDetectionOverlay();
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            uploadedImage.src = event.target.result;
-            uploadedImage.dataset.filename = file.name; // Store filename for mismatch checking
-            uploadedImage.style.display = "block";
-            if (video) video.style.display = "none";
-            if (placeholderUi) placeholderUi.style.display = "none";
-            if (stopCameraBtn) stopCameraBtn.style.display = "none";
-            if (flipCameraBtn) flipCameraBtn.style.display = "none";
-            showBackButtons(true);
-
-            // Auto-scan uploaded image immediately
-            setTimeout(() => {
-                if (scanBtn) scanBtn.click();
-            }, 100);
-        };
-        reader.readAsDataURL(file);
-    }
-
-    const btnUploadImage = document.getElementById("btn-upload-image");
-    if (btnUploadImage) {
-        btnUploadImage.addEventListener("click", () => {
-            if (fileInput) {
-                fileInput.value = ""; // Reset so selecting the same file re-triggers change event
-            }
-        });
-    }
-
-    if (fileInput) {
-        fileInput.addEventListener("click", () => {
-            fileInput.value = "";
-        });
-        fileInput.addEventListener("change", (e) => {
-            const file = e.target.files && e.target.files[0];
-            handleSelectedImageFile(file);
-        });
-    }
-
-    // Drag-and-drop image upload directly into the phone viewport
-    if (viewportContainer) {
-        viewportContainer.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            viewportContainer.style.outline = "2px dashed #2e7d32";
-        });
-        viewportContainer.addEventListener("dragleave", (e) => {
-            e.preventDefault();
-            viewportContainer.style.outline = "none";
-        });
-        viewportContainer.addEventListener("drop", (e) => {
-            e.preventDefault();
-            viewportContainer.style.outline = "none";
-            const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-            if (file && file.type && file.type.startsWith("image/")) {
-                handleSelectedImageFile(file);
-            }
-        });
-    }
+    // 📁 Image File Upload
+    fileInput.addEventListener("click", () => {
+        fileInput.value = "";
+    });
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            stopCamera();
+            clearDetectionOverlay();
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                uploadedImage.src = event.target.result;
+                uploadedImage.style.display = "block";
+                uploadedImage.dataset.filename = file.name; // Store filename for mismatch checking!
+                placeholderUi.style.display = "none";
+                showBackButtons(true);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     // Camera icon placeholder click to start webcam
     placeholderUi.addEventListener("click", () => {
@@ -803,9 +752,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (r >= 170 && g >= 145 && b < 130 && (r - b) >= 55 && (g - b) >= 40 && g >= r * 0.65 && (r - g) < 60) brightYellowCount++;
                 if (r > 110 && r > g + 35 && r > b + 30 && g < 110) redCount++;
                 if (r > 110 && r > g + 22 && b >= g - 20 && r > b + 20) coolAppleRedCount++;
-                if (r > 125 && r > g + 25 && (r - g) <= 65 && g >= b + 10 && b < 85) warmTomatoRedCount++;
+                if (r > 125 && r > g + 25 && g >= b + 10 && b < 85) warmTomatoRedCount++;
                 if (r > 80 && r > g + 18 && r > b + 8 && g < 140 && b < 145) blushRedCount++;
-                if (r >= 140 && (r - g) >= 42 && g >= 48 && b < 105 && (r - b) >= 60) orangeCount++;
+                if (r > 145 && g >= 50 && g < r * 0.75 && (r - g) >= 45 && b < 105 && r > b + 65) orangeCount++;
                 if (r > 55 && r < 165 && b > 65 && b >= r - 20 && g < r - 15 && g < b - 15) purpleCount++;
                 if (r > 140 && g > 140 && b > 140 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) whiteCount++;
                 if (r > 40 && r < 140 && g > 20 && g < 100 && b < 80 && r > g + 8) brownCount++;
@@ -813,11 +762,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!isMetallicGrey && r >= 115 && r <= 195 && g >= 85 && g <= 155 && b >= 65 && b <= 135 && (r - g) >= 12 && (r - g) <= 38 && (g - b) >= 4 && (g - b) <= 28) tanPotatoCount++;
                 if (inItemCore && r >= 38 && r < 145 && g >= 22 && g < 95 && b < 72 && (r - g) >= 5 && (r - g) <= 34 && b <= g + 8) brownRotCount++;
 
-                // True fungal mold (white/grey fuzzy mold, Botrytis, or blue-green Penicillium inside fruit core)
+                // True fungal mold (blue-green Penicillium or gray-green fuzzy mold inside fruit core)
                 const isBlueGreenMold = (
                     inItemCore &&
-                    ((g >= r + 6 && b >= r - 6 && g > 55 && g < 195 && b > 50 && b < 185) ||
-                     (r > 70 && g > 70 && b > 70 && r < 225 && g < 225 && b < 225 && Math.abs(r - g) <= 30 && Math.abs(g - b) <= 30 && chroma <= 32))
+                    ((g >= r + 8 && b >= r - 6 && g > 55 && g < 195 && b > 50 && b < 185 && (b - r) <= 50) ||
+                     (r > 75 && g > 75 && b > 75 && r < 210 && g < 210 && b < 210 && Math.abs(r - g) <= 28 && Math.abs(g - b) <= 28 && chroma <= 28))
                 );
                 if (isBlueGreenMold) moldCount++;
 
@@ -922,9 +871,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     else if (g > r + 10 && g > b) matureCount++;
                 } else if (fruit === "carrot") {
                     if (inItemCore && r < 50 && g < 50 && b < 50) decomposedCount++;
-                    else if (inItemCore && (isBlueGreenMold || (r > 40 && r < 120 && g > 30 && g < 85 && b < 65 && r > g))) rottenCount++;
+                    else if (inItemCore && r > 40 && r < 120 && g > 30 && g < 85 && b < 65 && r > g) rottenCount++;
                     else if (r > 120 && r < 165 && g > 70 && g < 120 && b < 70) overripeCount++;
-                    else if (r >= 145 && g > 65 && b < 95 && (r - b) >= 50) ripeCount++;
+                    else if (r >= 165 && g > 80 && b < 85) ripeCount++;
                     else if (r > 120 && g > 110 && b < 90) ripeningCount++;
                     else if (g > r + 10 && g > b) matureCount++;
                 } else if (fruit === "brinjal") {
@@ -1043,10 +992,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 stage = "decomposed";
                 defect = "Severe Decay & Fungal Mold";
             } else if (
-                moldCount / n >= 0.02 ||
+                moldCount / n >= 0.025 ||
                 (fruit === "apple"
-                    ? (rotRatio >= 0.08 || moldCount / n >= 0.015)
-                    : (rotRatio >= 0.06 || moldCount / n >= 0.015))
+                    ? (rotRatio >= 0.08 || moldCount / n >= 0.02)
+                    : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.14))
             ) {
                 stage = "rotten";
                 defect = "Fungal Mold & Necrotic Rot Spoilage";
@@ -1232,7 +1181,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const distSq = dx * dx + dy * dy;
                     const inCenterCore = distSq < 0.25;
 
-                    if (fruit !== "radish" && !inCenterCore && (isWhiteBg || isCheckeredBg)) continue;
+                    if (fruit !== "radish" && (isWhiteBg || isCheckeredBg)) continue;
                     if (isBlueWall) continue;
                     if (isUniformBorderBg && !(inCenterCore && borderDiff > 10)) continue;
 
@@ -1240,7 +1189,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (distSq > 0.36 && ((r < 62 && g < 62 && b < 62) || (chroma <= 20 && Math.max(r, g, b) < 145))) continue;
 
                     const isNeutralGray = (fruit !== "radish" && Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r > 145);
-                    if (!inCenterCore && isNeutralGray) continue;
+                    if (isNeutralGray) continue;
 
                     // 💻 Exclude metallic / lavender-grey laptop touchpads, boards, and desk surfaces only outside core fruit
                     const isMetallicOrGreySurface = (
@@ -1439,8 +1388,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const {
                 n: fruitPixelsCount, greenCount, yellowCount, brightYellowCount, redCount, orangeCount,
                 coolAppleRedCount, blushRedCount, warmTomatoRedCount, avgGbDiff,
-                purpleCount, whiteCount, brownCount, brownRotCount, moldCount, solanineCount, sproutCount, tanPotatoCount,
-                rawCount, matureCount, ripeCount, ripeningCount, overripeCount, rottenCount, decomposedCount
+                purpleCount, whiteCount, brownCount, moldCount, solanineCount, sproutCount, tanPotatoCount,
+                rawCount, matureCount, ripeCount, ripeningCount, rottenCount, decomposedCount
             } = overallAnalysis.counts;
 
             // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
@@ -1470,17 +1419,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Confirm authentic produce pigments: Real fruits/veggies MUST NOT be flagged as human hand!
             const hasRealProducePigments = (
-                yellowCount > fruitPixelsCount * 0.08 ||
-                brightYellowCount > fruitPixelsCount * 0.05 ||
-                orangeCount > fruitPixelsCount * 0.08 ||
-                greenCount > fruitPixelsCount * 0.08 ||
-                (warmTomatoRedCount > fruitPixelsCount * 0.08 && avgGbDiff >= 8) ||
-                (redCount > fruitPixelsCount * 0.10 && avgGbDiff >= 10) ||
-                purpleCount > fruitPixelsCount * 0.08
+                yellowCount > fruitPixelsCount * 0.06 ||
+                brightYellowCount > fruitPixelsCount * 0.04 ||
+                orangeCount > fruitPixelsCount * 0.06 ||
+                greenCount > fruitPixelsCount * 0.06 ||
+                coolAppleRedCount > fruitPixelsCount * 0.06 ||
+                warmTomatoRedCount > fruitPixelsCount * 0.06 ||
+                blushRedCount > fruitPixelsCount * 0.08 ||
+                redCount > fruitPixelsCount * 0.06 ||
+                purpleCount > fruitPixelsCount * 0.06
             );
 
-            // Trigger human hand/face if skin dominates
-            if (skinRatio > 0.18 && (!hasRealProducePigments || skinRatio > 0.30)) {
+            // Only trigger human hand/face if there are NO produce pigments and skin dominates
+            if (!hasRealProducePigments && skinRatio > 0.22) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
@@ -1550,7 +1501,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = "pineapple";
             } else if (fn.includes("ladyfinger") || fn.includes("okra")) {
                 opticallyDetected = "ladyfinger";
-            } else if (orangeCount > fruitPixelsCount * 0.07 || (sigBlobs.length > 0 && Math.max(sigBlobs[0].w, sigBlobs[0].h) / Math.max(1, Math.min(sigBlobs[0].w, sigBlobs[0].h)) >= 1.8 && orangeCount > fruitPixelsCount * 0.04)) {
+            } else if (orangeCount > fruitPixelsCount * 0.10) {
                 opticallyDetected = "carrot";
             } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || redCount > fruitPixelsCount * 0.09) {
                 opticallyDetected = "apple";
@@ -2620,13 +2571,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return tempCanvas.toDataURL("image/jpeg", 0.85).split(",")[1];
     }
 
-    async function callGeminiVisionAPI(base64Image, selectedFruit, callback) {
+    function callGeminiVisionAPI(base64Image, selectedFruit, callback) {
         const apiKey = localStorage.getItem("gemini_api_key");
         if (!apiKey || apiKey === "null" || apiKey === "undefined" || apiKey.trim() === "" || apiKey.includes("YOUR_API_KEY")) {
             callback({ error: "No API Key configured. Click the gear icon to save your key." });
             return;
         }
 
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        
         const prompt = `You are an expert agricultural quality inspector and computer vision analyzer for fruit & vegetable freshness.
 Analyze this image of fruit(s) or vegetable(s).
 
@@ -2683,62 +2636,45 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             }]
         };
 
-        const modelsToTry = [
-            "gemini-2.5-flash",
-            "gemini-2.0-flash"
-        ];
-
-        let lastErr = null;
-
-        for (const model of modelsToTry) {
-            const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-            const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
-            try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-                const fetchOpts = {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json",
-                        "x-goog-api-key": apiKey
-                    },
-                    body: JSON.stringify(requestBody)
-                };
-                if (controller) fetchOpts.signal = controller.signal;
-
-                const response = await fetch(url, fetchOpts);
-                if (timeoutId) clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    let text = data.candidates[0].content.parts[0].text.trim();
-                    if (text.startsWith("```")) {
-                        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-                    }
-                    const parsed = JSON.parse(text);
-                    callback(parsed);
-                    return;
-                }
-
-                let errMsg = `Status ${response.status}`;
+        fetch(url, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey
+            },
+            body: JSON.stringify(requestBody)
+        })
+        .then(async response => {
+            if (!response.ok) {
+                let errMsg = `API returned status ${response.status}`;
                 try {
                     const errData = await response.json();
                     if (errData && errData.error && errData.error.message) {
-                        errMsg = errData.error.message;
+                        errMsg = `${errData.error.message} (${response.status})`;
                     }
                 } catch (e) {}
-
-                lastErr = new Error(errMsg);
-                if (response.status === 400 || response.status === 403 || response.status === 429) {
-                    break;
-                }
-            } catch (err) {
-                if (timeoutId) clearTimeout(timeoutId);
-                lastErr = (err && err.name === "AbortError") ? new Error("Request timed out after 6s") : err;
+                throw new Error(errMsg);
             }
-        }
-
-        const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
-        callback({ error: `${(lastErr && lastErr.message) || "Network error"} [Using Key: ${maskedKey}]` });
+            return response.json();
+        })
+        .then(data => {
+            try {
+                let text = data.candidates[0].content.parts[0].text.trim();
+                if (text.startsWith("```")) {
+                    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                }
+                const parsed = JSON.parse(text);
+                callback(parsed);
+            } catch (err) {
+                console.error("Parse error:", err);
+                callback({ error: "Failed to parse Gemini response." });
+            }
+        })
+        .catch(err => {
+            console.error("API error:", err);
+            const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
+            callback({ error: `${err.message || "Network or API Key error."} [Using Key: ${maskedKey}]` });
+        });
     }
 
     function completeScan() {
@@ -2761,7 +2697,8 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    showAPIWarning(`Gemini API: ${apiResult.error}. Switching to local offline scanner...`);
+                    showAPIWarning(`Gemini API failed: ${apiResult.error}. Switching to local offline scanner...`);
+                    setActiveEngine("local");
                     runLocalScan();
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
@@ -2772,17 +2709,11 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                     } : null;
 
                     displayScanResult(
-                        apiResult.detectedFruit || selectedFruit, 
+                        apiResult.detectedFruit, 
                         apiResult.state ? apiResult.state.toLowerCase() : "ripe", 
                         apiResult.reason || getStageDescription(selectedFruit, apiResult.state || "ripe"),
                         bunchData
                     );
-                }
-            });
-        } else {
-            runLocalScan();
-        }
-    }
                 }
             });
         } else {
