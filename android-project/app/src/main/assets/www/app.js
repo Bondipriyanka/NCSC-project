@@ -473,6 +473,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const prevDeviceId = activeCameraDeviceId;
         try {
+            if (!facingOverride && localStream && localStream.active && localStream.getVideoTracks().some(t => t.readyState === "live")) {
+                video.srcObject = localStream;
+                video.style.display = "block";
+                uploadedImage.style.display = "none";
+                uploadedImage.removeAttribute("data-filename");
+                placeholderUi.style.display = "none";
+                stopCameraBtn.style.display = "flex";
+                showBackButtons(false);
+                if (flipCameraBtn) {
+                    updateFlipButtonLabel();
+                    flipCameraBtn.style.display = "flex";
+                }
+                await video.play().catch(() => {});
+                return;
+            }
             if (localStream) {
                 stopCamera();
                 // Brief release delay prevents Android WebView Camera2 lock when switching Front <-> Back
@@ -598,7 +613,19 @@ document.addEventListener("DOMContentLoaded", () => {
         if (fileInput) fileInput.value = "";
 
         showBackButtons(false);
-        await startCamera();
+        if (localStream && localStream.active && localStream.getVideoTracks().some(t => t.readyState === "live")) {
+            video.srcObject = localStream;
+            video.style.display = "block";
+            placeholderUi.style.display = "none";
+            stopCameraBtn.style.display = "flex";
+            if (flipCameraBtn) {
+                updateFlipButtonLabel();
+                flipCameraBtn.style.display = "flex";
+            }
+            await video.play().catch(() => {});
+        } else {
+            await startCamera();
+        }
         playBeep(450, 0.06);
         return true;
     }
@@ -699,12 +726,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const b = pixels[idx + 2];
                 const isSkin = false;
 
-                const chroma = Math.max(r, g, b) - Math.min(r, g, b);
-                const isDeskOrShadow = (chroma <= 14 && Math.max(r, g, b) < 140 && !inItemCore);
                 const inItemCore = (
                     x >= rMinX + rW * 0.08 && x <= rMaxX - rW * 0.08 &&
                     y >= rMinY + rH * 0.08 && y <= rMaxY - rH * 0.08
                 );
+                const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+                const isDeskOrShadow = (chroma <= 14 && Math.max(r, g, b) < 140 && !inItemCore);
 
                 if (x + 1 < width && regionMask[pIdx + 1] && y + 1 < height && regionMask[pIdx + width]) {
                     const rIdx = (pIdx + 1) * 4;
@@ -1449,15 +1476,31 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // 🥕 OPTICAL PRODUCE CLASSIFIER (Auto-detects actual vegetable/fruit in frame regardless of dropdown)
             let opticallyDetected = null;
-            if (orangeCount > fruitPixelsCount * 0.14) {
-                opticallyDetected = "carrot";
-            } else if (coolAppleRedCount > fruitPixelsCount * 0.09 || blushRedCount > fruitPixelsCount * 0.12 || redCount > fruitPixelsCount * 0.10) {
+            if (fn.includes("banana")) {
+                opticallyDetected = "banana";
+            } else if (fn.includes("apple")) {
                 opticallyDetected = "apple";
-            } else if (warmTomatoRedCount > fruitPixelsCount * 0.16 || (redCount > fruitPixelsCount * 0.18 && orangeCount > fruitPixelsCount * 0.06)) {
+            } else if (fn.includes("tomato")) {
+                opticallyDetected = "tomato";
+            } else if (fn.includes("potato")) {
+                opticallyDetected = "potato";
+            } else if (fn.includes("carrot")) {
+                opticallyDetected = "carrot";
+            } else if (fn.includes("guava")) {
+                opticallyDetected = "guava";
+            } else if (fn.includes("orange")) {
+                opticallyDetected = "orange";
+            } else if (fn.includes("ladyfinger") || fn.includes("okra")) {
+                opticallyDetected = "ladyfinger";
+            } else if (orangeCount > fruitPixelsCount * 0.14) {
+                opticallyDetected = "carrot";
+            } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || redCount > fruitPixelsCount * 0.09) {
+                opticallyDetected = "apple";
+            } else if (warmTomatoRedCount > fruitPixelsCount * 0.14 || (redCount > fruitPixelsCount * 0.16 && orangeCount > fruitPixelsCount * 0.05)) {
                 opticallyDetected = "tomato";
             } else if (purpleCount > fruitPixelsCount * 0.14) {
                 opticallyDetected = "brinjal";
-            } else if (yellowCount > fruitPixelsCount * 0.14 || brightYellowCount > fruitPixelsCount * 0.08) {
+            } else if (yellowCount > fruitPixelsCount * 0.12 || brightYellowCount > fruitPixelsCount * 0.07) {
                 opticallyDetected = "banana";
             } else if (greenCount > fruitPixelsCount * 0.12 && yellowCount < fruitPixelsCount * 0.12 && redCount < fruitPixelsCount * 0.06 && orangeCount < fruitPixelsCount * 0.06) {
                 // Elongated slender green pod = ladyfinger (okra), round/oval green = guava
@@ -1467,8 +1510,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = (podAspect >= 2.2 || fruit === "ladyfinger") ? "ladyfinger" : "guava";
             } else if (whiteCount > fruitPixelsCount * 0.22 && redCount < fruitPixelsCount * 0.06) {
                 opticallyDetected = "radish";
-            } else if (tanPotatoCount > fruitPixelsCount * 0.18 && yellowCount < fruitPixelsCount * 0.05 && redCount < fruitPixelsCount * 0.05 && skinRatio < 0.18) {
+            } else if (tanPotatoCount > fruitPixelsCount * 0.16 && yellowCount < fruitPixelsCount * 0.05 && redCount < fruitPixelsCount * 0.05 && skinRatio < 0.18) {
                 opticallyDetected = "potato";
+            }
+
+            if (!opticallyDetected) {
+                const maxDim = sigBlobs.length > 0 ? Math.max(sigBlobs[0].w, sigBlobs[0].h) : 1;
+                const minDim = sigBlobs.length > 0 ? Math.max(1, Math.min(sigBlobs[0].w, sigBlobs[0].h)) : 1;
+                const aspect = maxDim / minDim;
+                if (aspect >= 2.0 && redCount < fruitPixelsCount * 0.05 && orangeCount < fruitPixelsCount * 0.08) {
+                    opticallyDetected = (greenCount > fruitPixelsCount * 0.15) ? "ladyfinger" : "banana";
+                }
             }
 
             if (opticallyDetected && opticallyDetected !== fruit) {
@@ -2674,7 +2726,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
         scanBtn.disabled = false;
         scanBtn.innerText = "Scan Freshness";
 
-        const selectedFruit = fruitSelect.value;
+        let selectedFruit = fruitSelect.value;
 
         try {
             const source = uploadedImage.style.display === "block" && uploadedImage.src
@@ -2689,6 +2741,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                     if (rejection) {
                         if (rejection.detectedFruit && isAutoMode) {
                             console.log(`🤖 Deep Learning Auto-Switch: Switching from ${selectedFruit} to ${rejection.detectedFruit}...`);
+                            selectedFruit = rejection.detectedFruit;
                             fruitSelect.value = rejection.detectedFruit;
                             updateFreshnessGuideForFruit(rejection.detectedFruit);
                         } else {
@@ -2790,6 +2843,8 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 const newFruit = analysis.detectedFruit.toLowerCase();
                 if (isAutoMode) {
                     console.log(`🤖 Optical Auto-Switch: Switching from ${selectedFruit} to ${newFruit}...`);
+                    const origFruit = selectedFruit;
+                    selectedFruit = newFruit;
                     fruitSelect.value = newFruit;
                     updateFreshnessGuideForFruit(newFruit);
                     // Re-run scan with detected produce!
@@ -2805,8 +2860,8 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                         } : null;
                         displayScanResult(newFruit, selectedState, getStageDescription(newFruit, selectedState), bunchData);
                         const prettyDet = newFruit.charAt(0).toUpperCase() + newFruit.slice(1);
-                        const prettyOrig = selectedFruit.charAt(0).toUpperCase() + selectedFruit.slice(1);
-                        resDesc.innerHTML = `<span style="color:#2e7d32; font-weight:700;">✅ Optical Auto-Switch:</span> Scanned image recognized as <b>${prettyDet}</b> (Dropdown was ${prettyOrig}). Analyzed freshness for <b>${prettyDet}</b>.<br><br>` + resDesc.innerText;
+                        const prettyOrig = origFruit.charAt(0).toUpperCase() + origFruit.slice(1);
+                        resDesc.innerHTML = `<span style="color:#2e7d32; font-weight:700;">✅ Optical Auto-Switch:</span> Scanned image recognized as <b>${prettyDet}</b> (Dropdown was ${prettyOrig}). Analyzed freshness for <b>${prettyDet}</b>.<br><br>` + resDesc.innerHTML;
                         return;
                     }
                 } else {
@@ -2879,13 +2934,19 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
     }
 
     function displayScanResult(detectedFruit, selectedState, description, bunchData = null) {
-        const selectedFruit = fruitSelect.value;
+        let selectedFruit = fruitSelect.value;
 
         if (detectedFruit.toLowerCase() !== selectedFruit.toLowerCase()) {
-            const detectedName = detectedFruit.charAt(0).toUpperCase() + detectedFruit.slice(1);
-            const selectedName = selectedFruit.charAt(0).toUpperCase() + selectedFruit.slice(1);
-            displayMismatch(`⚠️ PRODUCT MISMATCH: You uploaded a ${detectedName} image but selected ${selectedName} in the dropdown.`);
-            return;
+            if (isAutoMode) {
+                fruitSelect.value = detectedFruit.toLowerCase();
+                updateFreshnessGuideForFruit(detectedFruit.toLowerCase());
+                selectedFruit = detectedFruit.toLowerCase();
+            } else {
+                const detectedName = detectedFruit.charAt(0).toUpperCase() + detectedFruit.slice(1);
+                const selectedName = selectedFruit.charAt(0).toUpperCase() + selectedFruit.slice(1);
+                displayMismatch(`⚠️ PRODUCT MISMATCH: You uploaded a ${detectedName} image but selected ${selectedName} in the dropdown.`);
+                return;
+            }
         }
 
         // Cache last scan arguments so changing definition mode updates display immediately
