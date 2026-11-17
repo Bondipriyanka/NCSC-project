@@ -748,9 +748,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (r >= 170 && g >= 145 && b < 130 && (r - b) >= 55 && (g - b) >= 40 && g >= r * 0.65 && (r - g) < 60) brightYellowCount++;
                 if (r > 110 && r > g + 35 && r > b + 30 && g < 110) redCount++;
                 if (r > 110 && r > g + 22 && b >= g - 20 && r > b + 20) coolAppleRedCount++;
-                if (r > 125 && r > g + 25 && g >= b + 10 && b < 85) warmTomatoRedCount++;
+                if (r > 125 && r > g + 25 && (r - g) <= 65 && g >= b + 10 && b < 85) warmTomatoRedCount++;
                 if (r > 80 && r > g + 18 && r > b + 8 && g < 140 && b < 145) blushRedCount++;
-                if (r > 145 && g >= 50 && g < r * 0.75 && (r - g) >= 45 && b < 105 && r > b + 65) orangeCount++;
+                if (r >= 140 && (r - g) >= 42 && g >= 48 && b < 105 && (r - b) >= 60) orangeCount++;
                 if (r > 55 && r < 165 && b > 65 && b >= r - 20 && g < r - 15 && g < b - 15) purpleCount++;
                 if (r > 140 && g > 140 && b > 140 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) whiteCount++;
                 if (r > 40 && r < 140 && g > 20 && g < 100 && b < 80 && r > g + 8) brownCount++;
@@ -758,11 +758,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!isMetallicGrey && r >= 115 && r <= 195 && g >= 85 && g <= 155 && b >= 65 && b <= 135 && (r - g) >= 12 && (r - g) <= 38 && (g - b) >= 4 && (g - b) <= 28) tanPotatoCount++;
                 if (inItemCore && r >= 38 && r < 145 && g >= 22 && g < 95 && b < 72 && (r - g) >= 5 && (r - g) <= 34 && b <= g + 8) brownRotCount++;
 
-                // True fungal mold (blue-green Penicillium or gray-green fuzzy mold inside fruit core)
+                // True fungal mold (white/grey fuzzy mold, Botrytis, or blue-green Penicillium inside fruit core)
                 const isBlueGreenMold = (
                     inItemCore &&
-                    ((g >= r + 8 && b >= r - 6 && g > 55 && g < 195 && b > 50 && b < 185 && (b - r) <= 50) ||
-                     (r > 75 && g > 75 && b > 75 && r < 210 && g < 210 && b < 210 && Math.abs(r - g) <= 28 && Math.abs(g - b) <= 28 && chroma <= 28))
+                    ((g >= r + 6 && b >= r - 6 && g > 55 && g < 195 && b > 50 && b < 185) ||
+                     (r > 70 && g > 70 && b > 70 && r < 225 && g < 225 && b < 225 && Math.abs(r - g) <= 30 && Math.abs(g - b) <= 30 && chroma <= 32))
                 );
                 if (isBlueGreenMold) moldCount++;
 
@@ -867,9 +867,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     else if (g > r + 10 && g > b) matureCount++;
                 } else if (fruit === "carrot") {
                     if (inItemCore && r < 50 && g < 50 && b < 50) decomposedCount++;
-                    else if (inItemCore && r > 40 && r < 120 && g > 30 && g < 85 && b < 65 && r > g) rottenCount++;
+                    else if (inItemCore && (isBlueGreenMold || (r > 40 && r < 120 && g > 30 && g < 85 && b < 65 && r > g))) rottenCount++;
                     else if (r > 120 && r < 165 && g > 70 && g < 120 && b < 70) overripeCount++;
-                    else if (r >= 165 && g > 80 && b < 85) ripeCount++;
+                    else if (r >= 145 && g > 65 && b < 95 && (r - b) >= 50) ripeCount++;
                     else if (r > 120 && g > 110 && b < 90) ripeningCount++;
                     else if (g > r + 10 && g > b) matureCount++;
                 } else if (fruit === "brinjal") {
@@ -988,10 +988,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 stage = "decomposed";
                 defect = "Severe Decay & Fungal Mold";
             } else if (
-                moldCount / n >= 0.025 ||
+                moldCount / n >= 0.02 ||
                 (fruit === "apple"
-                    ? (rotRatio >= 0.08 || moldCount / n >= 0.02)
-                    : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.14))
+                    ? (rotRatio >= 0.08 || moldCount / n >= 0.015)
+                    : (rotRatio >= 0.06 || moldCount / n >= 0.015))
             ) {
                 stage = "rotten";
                 defect = "Fungal Mold & Necrotic Rot Spoilage";
@@ -1177,7 +1177,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const distSq = dx * dx + dy * dy;
                     const inCenterCore = distSq < 0.25;
 
-                    if (fruit !== "radish" && (isWhiteBg || isCheckeredBg)) continue;
+                    if (fruit !== "radish" && !inCenterCore && (isWhiteBg || isCheckeredBg)) continue;
                     if (isBlueWall) continue;
                     if (isUniformBorderBg && !(inCenterCore && borderDiff > 10)) continue;
 
@@ -1185,7 +1185,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (distSq > 0.36 && ((r < 62 && g < 62 && b < 62) || (chroma <= 20 && Math.max(r, g, b) < 145))) continue;
 
                     const isNeutralGray = (fruit !== "radish" && Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r > 145);
-                    if (isNeutralGray) continue;
+                    if (!inCenterCore && isNeutralGray) continue;
 
                     // 💻 Exclude metallic / lavender-grey laptop touchpads, boards, and desk surfaces only outside core fruit
                     const isMetallicOrGreySurface = (
@@ -1415,19 +1415,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Confirm authentic produce pigments: Real fruits/veggies MUST NOT be flagged as human hand!
             const hasRealProducePigments = (
-                yellowCount > fruitPixelsCount * 0.06 ||
-                brightYellowCount > fruitPixelsCount * 0.04 ||
-                orangeCount > fruitPixelsCount * 0.06 ||
-                greenCount > fruitPixelsCount * 0.06 ||
-                coolAppleRedCount > fruitPixelsCount * 0.06 ||
-                warmTomatoRedCount > fruitPixelsCount * 0.06 ||
-                blushRedCount > fruitPixelsCount * 0.08 ||
-                redCount > fruitPixelsCount * 0.06 ||
-                purpleCount > fruitPixelsCount * 0.06
+                yellowCount > fruitPixelsCount * 0.08 ||
+                brightYellowCount > fruitPixelsCount * 0.05 ||
+                orangeCount > fruitPixelsCount * 0.08 ||
+                greenCount > fruitPixelsCount * 0.08 ||
+                (warmTomatoRedCount > fruitPixelsCount * 0.08 && avgGbDiff >= 8) ||
+                (redCount > fruitPixelsCount * 0.10 && avgGbDiff >= 10) ||
+                purpleCount > fruitPixelsCount * 0.08
             );
 
-            // Only trigger human hand/face if there are NO produce pigments and skin dominates
-            if (!hasRealProducePigments && skinRatio > 0.22) {
+            // Trigger human hand/face if skin dominates
+            if (skinRatio > 0.18 && (!hasRealProducePigments || skinRatio > 0.30)) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
@@ -1497,7 +1495,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = "pineapple";
             } else if (fn.includes("ladyfinger") || fn.includes("okra")) {
                 opticallyDetected = "ladyfinger";
-            } else if (orangeCount > fruitPixelsCount * 0.10) {
+            } else if (orangeCount > fruitPixelsCount * 0.07 || (sigBlobs.length > 0 && Math.max(sigBlobs[0].w, sigBlobs[0].h) / Math.max(1, Math.min(sigBlobs[0].w, sigBlobs[0].h)) >= 1.8 && orangeCount > fruitPixelsCount * 0.04)) {
                 opticallyDetected = "carrot";
             } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || redCount > fruitPixelsCount * 0.09) {
                 opticallyDetected = "apple";
