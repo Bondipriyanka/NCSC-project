@@ -204,7 +204,7 @@
                                 ❌ Turn Off
                             </button>
                             
-                            <video id="camera-video" autoplay playsinline style="display: none;"></video>
+                            <video id="camera-video" autoplay playsinline muted style="display: none;"></video>
                             <img id="uploaded-image" alt="Upload preview" style="display: none;">
                             <canvas id="detection-overlay" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 12;"></canvas>
                             
@@ -329,10 +329,10 @@
                 </div>
 
                 <div class="selection-row" style="width: 100%;">
-                    <button type="button" id="btn-upload-image" class="app-btn" style="background: #1b5e20; color: #ffffff; cursor: pointer; flex: 1;">
+                    <label for="file-input" class="app-btn" id="btn-upload-image" style="background: #1b5e20; color: #ffffff; cursor: pointer; flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center;">
                         📁 Upload Image
-                    </button>
-                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    </label>
+                    <input type="file" id="file-input" accept="image/*" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; z-index: -1;">
                     
                     <button class="app-btn" id="scan-btn" style="background: #2e7d32; color: #ffffff; flex: 1.5;">
                         ⚡ Scan Freshness
@@ -550,6 +550,6 @@
     <!-- 🧠 TensorFlow.js Deep Learning Neural Engine & MobileNet -->
     <script src="tf.min.js"></script>
     <script src="mobilenet.min.js"></script>
-    <script src="app.js?v=3.9"></script>
+    <script src="app.js?v=4.0"></script>
 </body>
 </html>

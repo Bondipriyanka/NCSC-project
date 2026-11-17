@@ -426,10 +426,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function acquireCameraStream(targetFacing, previousDeviceId) {
-        const attempts = [
-            { video: { facingMode: { exact: targetFacing }, width: { ideal: 640 }, height: { ideal: 480 } } }
-        ];
-
+        const attempts = [];
+        if (targetFacing) {
+            attempts.push({ video: { facingMode: targetFacing, width: { ideal: 640 }, height: { ideal: 480 } } });
+        }
         if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === "function") {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
@@ -443,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     if (matched && matched.deviceId) {
                         attempts.push({
-                            video: { deviceId: { exact: matched.deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+                            video: { deviceId: matched.deviceId, width: { ideal: 640 }, height: { ideal: 480 } }
                         });
                     }
                 }
@@ -451,8 +451,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.warn("Device enumeration skipped:", enumErr);
             }
         }
-
-        attempts.push({ video: { facingMode: { ideal: targetFacing }, width: { ideal: 640 }, height: { ideal: 480 } } });
+        attempts.push({ video: { width: { ideal: 640 }, height: { ideal: 480 } } });
         attempts.push({ video: true });
 
         let lastErr = null;
@@ -475,6 +474,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             if (!facingOverride && localStream && localStream.active && localStream.getVideoTracks().some(t => t.readyState === "live")) {
                 video.srcObject = localStream;
+                video.muted = true;
+                video.playsInline = true;
+                video.setAttribute("playsinline", "");
+                video.setAttribute("muted", "");
                 video.style.display = "block";
                 uploadedImage.style.display = "none";
                 uploadedImage.removeAttribute("data-filename");
@@ -503,6 +506,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             video.srcObject = localStream;
+            video.muted = true;
+            video.playsInline = true;
+            video.setAttribute("playsinline", "");
+            video.setAttribute("muted", "");
             video.style.display = "block";
             uploadedImage.style.display = "none";
             uploadedImage.removeAttribute("data-filename");
@@ -513,7 +520,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateFlipButtonLabel();
                 flipCameraBtn.style.display = "flex";
             }
-            await video.play().catch(() => {});
+            await video.play().catch(playErr => {
+                console.warn("video.play() warning:", playErr);
+            });
         } catch (err) {
             console.error("Camera access denied:", err);
             stopCamera();
@@ -542,21 +551,19 @@ document.addEventListener("DOMContentLoaded", () => {
         clearDetectionOverlay();
         const reader = new FileReader();
         reader.onload = (event) => {
-            uploadedImage.onload = () => {
-                uploadedImage.style.display = "block";
-                if (video) video.style.display = "none";
-                if (placeholderUi) placeholderUi.style.display = "none";
-                if (stopCameraBtn) stopCameraBtn.style.display = "none";
-                if (flipCameraBtn) flipCameraBtn.style.display = "none";
-                showBackButtons(true);
-
-                // Auto-scan uploaded image immediately
-                setTimeout(() => {
-                    if (scanBtn) scanBtn.click();
-                }, 120);
-            };
             uploadedImage.src = event.target.result;
             uploadedImage.dataset.filename = file.name; // Store filename for mismatch checking
+            uploadedImage.style.display = "block";
+            if (video) video.style.display = "none";
+            if (placeholderUi) placeholderUi.style.display = "none";
+            if (stopCameraBtn) stopCameraBtn.style.display = "none";
+            if (flipCameraBtn) flipCameraBtn.style.display = "none";
+            showBackButtons(true);
+
+            // Auto-scan uploaded image immediately
+            setTimeout(() => {
+                if (scanBtn) scanBtn.click();
+            }, 100);
         };
         reader.readAsDataURL(file);
     }
@@ -566,7 +573,6 @@ document.addEventListener("DOMContentLoaded", () => {
         btnUploadImage.addEventListener("click", () => {
             if (fileInput) {
                 fileInput.value = ""; // Reset so selecting the same file re-triggers change event
-                fileInput.click();
             }
         });
     }
