@@ -516,6 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
             await video.play().catch(() => {});
         } catch (err) {
             console.error("Camera access denied:", err);
+            stopCamera();
             alert("Camera blocked or unavailable. Please allow camera permissions or upload an image.");
         }
     }
@@ -534,23 +535,71 @@ document.addEventListener("DOMContentLoaded", () => {
         clearDetectionOverlay();
     }
 
-    // 📁 Image File Upload
-    fileInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            stopCamera();
-            clearDetectionOverlay();
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                uploadedImage.src = event.target.result;
+    // 📁 Image File Upload Handling
+    function handleSelectedImageFile(file) {
+        if (!file) return;
+        stopCamera();
+        clearDetectionOverlay();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            uploadedImage.onload = () => {
                 uploadedImage.style.display = "block";
-                uploadedImage.dataset.filename = file.name; // Store filename for mismatch checking!
-                placeholderUi.style.display = "none";
+                if (video) video.style.display = "none";
+                if (placeholderUi) placeholderUi.style.display = "none";
+                if (stopCameraBtn) stopCameraBtn.style.display = "none";
+                if (flipCameraBtn) flipCameraBtn.style.display = "none";
                 showBackButtons(true);
+
+                // Auto-scan uploaded image immediately
+                setTimeout(() => {
+                    if (scanBtn) scanBtn.click();
+                }, 120);
             };
-            reader.readAsDataURL(file);
-        }
-    });
+            uploadedImage.src = event.target.result;
+            uploadedImage.dataset.filename = file.name; // Store filename for mismatch checking
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const btnUploadImage = document.getElementById("btn-upload-image");
+    if (btnUploadImage) {
+        btnUploadImage.addEventListener("click", () => {
+            if (fileInput) {
+                fileInput.value = ""; // Reset so selecting the same file re-triggers change event
+                fileInput.click();
+            }
+        });
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener("click", () => {
+            fileInput.value = "";
+        });
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files && e.target.files[0];
+            handleSelectedImageFile(file);
+        });
+    }
+
+    // Drag-and-drop image upload directly into the phone viewport
+    if (viewportContainer) {
+        viewportContainer.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            viewportContainer.style.outline = "2px dashed #2e7d32";
+        });
+        viewportContainer.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            viewportContainer.style.outline = "none";
+        });
+        viewportContainer.addEventListener("drop", (e) => {
+            e.preventDefault();
+            viewportContainer.style.outline = "none";
+            const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (file && file.type && file.type.startsWith("image/")) {
+                handleSelectedImageFile(file);
+            }
+        });
+    }
 
     // Camera icon placeholder click to start webcam
     placeholderUi.addEventListener("click", () => {
