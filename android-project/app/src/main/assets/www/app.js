@@ -2697,8 +2697,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    showAPIWarning(`Gemini API failed: ${apiResult.error}. Switching to local offline scanner...`);
-                    setActiveEngine("local");
+                    showAPIWarning(`Gemini Vision: ${apiResult.error}. Displaying local instant scan...`);
                     runLocalScan();
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
