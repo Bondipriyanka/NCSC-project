@@ -1441,13 +1441,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 greenCount > fruitPixelsCount * 0.06 ||
                 coolAppleRedCount > fruitPixelsCount * 0.06 ||
                 warmTomatoRedCount > fruitPixelsCount * 0.06 ||
-                blushRedCount > fruitPixelsCount * 0.08 ||
-                redCount > fruitPixelsCount * 0.06 ||
+                (redCount > fruitPixelsCount * 0.08 && avgGbDiff > 6) ||
                 purpleCount > fruitPixelsCount * 0.06
             );
 
-            // Only trigger human hand/face if there are NO produce pigments and skin dominates
-            if (!hasRealProducePigments && skinRatio > 0.22) {
+            // Trigger human hand/face if skin is detected:
+            if (skinRatio >= 0.12 || (!hasRealProducePigments && skinRatio >= 0.07)) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
@@ -1526,9 +1525,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = "pineapple";
             } else if (orangeCount > fruitPixelsCount * 0.10 || (orangeCount > fruitPixelsCount * 0.06 && (moldCount > 0 || rottenCount > 0))) {
                 opticallyDetected = "carrot";
-            } else if (warmTomatoRedCount > fruitPixelsCount * 0.12 && avgGbDiff >= 10) {
+            } else if (warmTomatoRedCount > fruitPixelsCount * 0.12 && avgGbDiff >= 10 && skinRatio < 0.08) {
                 opticallyDetected = "tomato";
-            } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || (redCount > fruitPixelsCount * 0.10 && avgGbDiff < 10)) {
+            } else if (((coolAppleRedCount > fruitPixelsCount * 0.08 || (redCount > fruitPixelsCount * 0.10 && avgGbDiff < 10)) && skinRatio < 0.08) || (blushRedCount > fruitPixelsCount * 0.14 && skinRatio < 0.05)) {
                 opticallyDetected = "apple";
             } else if (purpleCount > fruitPixelsCount * 0.14) {
                 opticallyDetected = "brinjal";
@@ -2601,11 +2600,21 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
         
         const prompt = `You are an expert agricultural quality inspector and computer vision analyzer for fruit & vegetable freshness.
-Analyze this image of fruit(s) or vegetable(s).
+Analyze this image.
 
+FIRST, CRITICAL CHECK:
+Does this image depict a HUMAN (human face, selfie, person, human hand/fingers, body), animal/pet, electronic device (mobile phone, laptop), toy/doll, empty room, or background with NO actual fruit or vegetable?
+If YES, you MUST output ONLY this JSON:
+{
+  "isInvalid": true,
+  "objectType": "human",
+  "message": "⚠️ HUMAN DETECTED (Face / Hand / Person): A human was detected in the camera frame. Please place an actual fruit or vegetable in view to test freshness."
+}
+
+IF THE IMAGE CONTAINS REAL FRUIT(S) OR VEGETABLE(S):
 1. Identify product name (must be one of: banana, apple, mango, tomato, orange, grape, pineapple, ladyfinger, guava, radish, potato, carrot, cucumber, cabbage, capsicum, brinjal).
 2. Check if the image displays a SINGLE item or a BUNCH / MULTIPLE items (e.g. bunch/cluster of bananas, basket/tray/box/bag of apples or tomatoes).
 3. Freshness stages are: raw, mature, ripening, ripe, overripe, rotten, decomposed.
@@ -2628,6 +2637,7 @@ If it is a SINGLE item:
 
 Return ONLY a valid JSON object in this exact schema without markdown code blocks:
 {
+  "isInvalid": false,
   "detectedFruit": "string",
   "isBunch": boolean,
   "totalCount": number,
@@ -2659,45 +2669,62 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             }]
         };
 
-        fetch(url, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey
-            },
-            body: JSON.stringify(requestBody)
-        })
-        .then(async response => {
-            if (!response.ok) {
-                let errMsg = `API returned status ${response.status}`;
-                try {
-                    const errData = await response.json();
-                    if (errData && errData.error && errData.error.message) {
-                        errMsg = `${errData.error.message} (${response.status})`;
+        function tryModel(index) {
+            if (index >= candidateModels.length) {
+                const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
+                callback({ error: `Gemini API quota/rate limited or unavailable. [Using Key: ${maskedKey}]` });
+                return;
+            }
+            const model = candidateModels[index];
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+            fetch(url, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": apiKey
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    let errMsg = `API returned status ${response.status}`;
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.error && errData.error.message) {
+                            errMsg = `${errData.error.message} (${response.status})`;
+                        }
+                    } catch (e) {}
+                    if (response.status === 404 || response.status === 429) {
+                        console.warn(`Gemini model ${model} returned ${response.status}, cascading to next model...`);
+                        tryModel(index + 1);
+                        return null;
                     }
-                } catch (e) {}
-                throw new Error(errMsg);
-            }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                let text = data.candidates[0].content.parts[0].text.trim();
-                if (text.startsWith("```")) {
-                    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                    throw new Error(errMsg);
                 }
-                const parsed = JSON.parse(text);
-                callback(parsed);
-            } catch (err) {
-                console.error("Parse error:", err);
-                callback({ error: "Failed to parse Gemini response." });
-            }
-        })
-        .catch(err => {
-            console.error("API error:", err);
-            const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
-            callback({ error: `${err.message || "Network or API Key error."} [Using Key: ${maskedKey}]` });
-        });
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return;
+                try {
+                    let text = data.candidates[0].content.parts[0].text.trim();
+                    if (text.startsWith("```")) {
+                        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                    }
+                    const parsed = JSON.parse(text);
+                    callback(parsed);
+                } catch (err) {
+                    console.error("Parse error:", err);
+                    callback({ error: "Failed to parse Gemini response." });
+                }
+            })
+            .catch(err => {
+                console.error(`Gemini model ${model} error:`, err);
+                tryModel(index + 1);
+            });
+        }
+
+        tryModel(0);
     }
 
     function completeScan() {
@@ -2710,7 +2737,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             resValue.style.color = "var(--text-secondary)";
             resShelf.innerText = "Vision API";
             resShelf.style.backgroundColor = "var(--border-color)";
-            resDesc.innerText = "Sending image to Gemini 2.5 Flash for multi-item & batch freshness analysis...";
+            resDesc.innerText = "Sending image to Gemini Vision for multi-item & batch freshness analysis...";
             scanBtn.disabled = true;
 
             const base64Img = getCaptureBase64();
@@ -2720,12 +2747,14 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    const isQuota = apiResult.error.includes("429") || apiResult.error.toLowerCase().includes("exhausted");
+                    const isQuota = apiResult.error.includes("429") || apiResult.error.toLowerCase().includes("quota") || apiResult.error.toLowerCase().includes("exhausted");
                     const userNotice = isQuota
                         ? "⚠️ Gemini API Quota Limit (429 Rate Exceeded). High-Precision Local Offline AI Activated."
                         : `Gemini Vision: ${apiResult.error}. Displaying local instant scan...`;
                     showAPIWarning(userNotice);
                     runLocalScan();
+                } else if (apiResult.isInvalid) {
+                    displayMismatch(apiResult.message || "⚠️ HUMAN / NON-PRODUCE DETECTED: Please scan an actual fruit or vegetable.");
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
                         isBunch: true,
