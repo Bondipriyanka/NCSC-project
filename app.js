@@ -37,19 +37,27 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!predictions || !predictions.length) return null;
 
         const TOY_WORDS = ['teddy', 'toy', 'doll', 'puppet', 'marionette', 'plush', 'stuffed'];
-        const ELEC_WORDS = ['cellular', 'cellphone', 'mobile phone', 'telephone', 'laptop', 'notebook', 'screen', 'monitor', 'television', 'mouse', 'keyboard', 'modem', 'remote', 'hand-held', 'ipod'];
+        const ELEC_WORDS = ['cellular', 'cellphone', 'mobile phone', 'telephone', 'laptop', 'notebook', 'screen', 'monitor', 'television', 'mouse', 'keyboard', 'modem', 'remote', 'hand-held', 'ipod', 'pad', 'tablet', 'speaker'];
         const HOUSEHOLD_WORDS = ['cup', 'mug', 'coffee mug', 'water bottle', 'pill bottle', 'plate', 'bowl', 'fork', 'knife', 'spoon', 'shoe', 'boot', 'sandal', 'sneaker', 'sock', 'glove', 'jersey', 'shirt', 't-shirt', 'suit', 'jacket', 'coat', 'jean', 'pants', 'dress', 'wallet', 'purse', 'backpack', 'bag', 'watch', 'clock', 'chair', 'table', 'desk', 'couch', 'sofa', 'bed', 'pillow', 'blanket', 'curtain', 'rug', 'car', 'vehicle', 'wheel', 'bicycle', 'motorcycle', 'pen', 'pencil', 'book', 'envelope', 'box', 'carton'];
-        const HAND_WORDS = ['hand', 'glove', 'band aid', 'bandage', 'arm', 'finger', 'wrist'];
+        const HAND_WORDS = ['hand', 'glove', 'band aid', 'bandage', 'arm', 'finger', 'wrist', 'person', 'face', 'wig', 'sunglass'];
 
         for (const p of predictions) {
             const name = p.className.toLowerCase();
             const prob = p.probability;
 
             for (const w of HAND_WORDS) {
-                if (name.includes(w) && prob >= 0.10) {
+                if (name.includes(w) && prob >= 0.08) {
                     return {
                         type: 'hand',
-                        message: '⚠️ HUMAN HAND DETECTED: Deep Learning MobileNet identified human skin / hand (' + Math.round(prob * 100) + '% confidence). Please scan an actual fruit or vegetable.'
+                        message: '⚠️ HUMAN DETECTED (Face / Hand / Person): Deep Learning MobileNet identified human features (' + Math.round(prob * 100) + '% confidence). Please scan an actual fruit or vegetable.'
+                    };
+                }
+            }
+            for (const w of ELEC_WORDS) {
+                if (name.includes(w) && prob >= 0.08) {
+                    return {
+                        type: 'electronics',
+                        message: '⚠️ CELL PHONE / ELECTRONICS DETECTED: Deep Learning MobileNet identified a ' + p.className + ' (' + Math.round(prob * 100) + '% confidence). Please scan a real fruit or vegetable.'
                     };
                 }
             }
@@ -58,14 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return {
                         type: 'toy',
                         message: '⚠️ NON-PRODUCE DETECTED (Toy / Doll): Deep Learning MobileNet identified a ' + p.className + ' (' + Math.round(prob * 100) + '% confidence). Please scan a real fruit or vegetable.'
-                    };
-                }
-            }
-            for (const w of ELEC_WORDS) {
-                if (name.includes(w) && prob >= 0.10) {
-                    return {
-                        type: 'electronics',
-                        message: '⚠️ ELECTRONIC DEVICE DETECTED: Deep Learning MobileNet identified a ' + p.className + ' (' + Math.round(prob * 100) + '% confidence). Please scan a real fruit or vegetable.'
                     };
                 }
             }
@@ -1358,11 +1358,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 rawCount, matureCount, ripeCount, ripeningCount, rottenCount, decomposedCount
             } = overallAnalysis.counts;
 
-            // 🥔 Potato Tuber Optical Auto-Recognition (runs before selfie filter since tan potato skin overlaps human skin RGB)
-            if (fruit !== "potato" && fruit !== "carrot" && tanPotatoCount > fruitPixelsCount * 0.10 && yellowCount < fruitPixelsCount * 0.05 && greenCount < fruitPixelsCount * 0.05 && redCount < fruitPixelsCount * 0.06 && orangeCount < fruitPixelsCount * 0.04) {
-                return { state: "mismatch", detectedFruit: "potato", message: "⚠️ PRODUCT MISMATCH DETECTED: Earthy tan Potato tuber profile detected instead of " + fruit.toUpperCase() + ". Switching to Potato." };
-            }
-
             // 🛑 AI PRODUCE GATEKEEPER 1: HUMAN HAND / SKIN DETECTION
             let humanSkinPixels = 0;
             for (let pIdx = 0; pIdx < W * H; pIdx++) {
@@ -1401,13 +1396,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 purpleCount > fruitPixelsCount * 0.06
             );
 
-            // Only trigger human hand if there are NO produce pigments and skin dominates
-            if (!hasRealProducePigments && skinRatio > 0.25) {
+            // Only trigger human hand/face if there are NO produce pigments and skin dominates
+            if (!hasRealProducePigments && skinRatio > 0.22) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
                     objectType: "human_hand",
-                    message: "⚠️ HUMAN HAND DETECTED: A human hand or skin was detected in the camera frame. Please place an actual fruit or vegetable in view to test freshness."
+                    message: "⚠️ HUMAN DETECTED (Face / Hand / Person): A human was detected in the camera frame. Please place an actual fruit or vegetable in view to test freshness."
                 };
             }
 
@@ -1419,11 +1414,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2];
                 const chroma = Math.max(r, g, b) - Math.min(r, g, b);
                 // Dark glass screen / dark plastic bezel
-                const isDarkGlass = (r < 70 && g < 70 && b < 70 && chroma <= 16);
+                const isDarkGlass = (r < 75 && g < 75 && b < 75 && chroma <= 16);
                 // Glowing digital display / blue-heavy LED screen
-                const isLitScreen = (b >= 100 && (b - r) >= 20 && (b - g) >= 10);
+                const isLitScreen = (b >= 95 && (b - r) >= 15 && (b - g) >= 8);
                 // White digital UI / browser / document on screen
-                const isWhiteDigitalUI = (r > 190 && g > 190 && b > 190 && chroma <= 14);
+                const isWhiteDigitalUI = (r > 185 && g > 185 && b > 185 && chroma <= 14);
                 // Matte aluminum / grey plastic gadget surface
                 const isMetallicGadget = (chroma <= 16 && r >= 65 && r <= 190 && Math.abs(r - g) <= 12 && Math.abs(g - b) <= 12);
 
@@ -1432,12 +1427,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             const electronicRatio = electronicPixels / Math.max(1, fruitPixelsCount);
-            if ((electronicRatio > 0.40 && !hasRealProducePigments) || (electronicRatio > 0.60)) {
+            if ((electronicRatio > 0.35 && !hasRealProducePigments) || (electronicRatio > 0.55)) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
                     objectType: "electronic_device",
-                    message: "⚠️ ELECTRONIC DEVICE DETECTED: A mobile phone or electronic device was detected in the camera frame. Please scan a real biological fruit or vegetable."
+                    message: "⚠️ CELL PHONE / ELECTRONICS DETECTED: A mobile phone or electronic device was detected in the camera frame. Please scan a real biological fruit or vegetable."
                 };
             }
 
