@@ -762,7 +762,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const isBlueGreenMold = (
                     inItemCore &&
                     ((g >= r + 8 && b >= r - 6 && g > 55 && g < 195 && b > 50 && b < 185 && (b - r) <= 50) ||
-                     (r > 85 && g > 85 && b > 80 && r < 200 && g < 200 && b < 200 && Math.abs(r - g) <= 18 && Math.abs(g - b) <= 18 && chroma <= 20))
+                     (r > 75 && g > 75 && b > 75 && r < 210 && g < 210 && b < 210 && Math.abs(r - g) <= 28 && Math.abs(g - b) <= 28 && chroma <= 28))
                 );
                 if (isBlueGreenMold) moldCount++;
 
@@ -988,13 +988,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 stage = "decomposed";
                 defect = "Severe Decay & Fungal Mold";
             } else if (
-                moldCount / n >= 0.06 ||
+                moldCount / n >= 0.025 ||
                 (fruit === "apple"
-                    ? (rotRatio >= 0.28 || (rotRatio >= 0.16 && ripeCount / n < 0.32))
-                    : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.20))
+                    ? (rotRatio >= 0.08 || moldCount / n >= 0.02)
+                    : ((rotRatio >= 0.07 && ripeCount / n < 0.35) || rotRatio >= 0.14))
             ) {
                 stage = "rotten";
-                defect = "Brown Rot Lesions & Spoilage";
+                defect = "Fungal Mold & Necrotic Rot Spoilage";
             } else if (overripeCount / n > 0.25 && ripeCount / n < 0.40) {
                 stage = "overripe";
                 defect = "Softening / Surface Blemishes";
@@ -1078,6 +1078,9 @@ document.addEventListener("DOMContentLoaded", () => {
             drawSourcePreservingAspect(tempCtx, source, W, H, "cover");
             const pixels = tempCtx.getImageData(0, 0, W, H).data;
             const fruit = fruitSelect.value;
+            const fn = (typeof uploadedImage !== 'undefined' && uploadedImage && uploadedImage.style.display === 'block' && uploadedImage.dataset && uploadedImage.dataset.filename)
+                ? uploadedImage.dataset.filename.toLowerCase()
+                : "";
 
             // 1. Estimate border background color from outer 3px rim
             let sumR = 0, sumG = 0, sumB = 0, bCnt = 0;
@@ -1184,7 +1187,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const isNeutralGray = (fruit !== "radish" && Math.abs(r - g) < 14 && Math.abs(g - b) < 14 && r > 145);
                     if (isNeutralGray) continue;
 
-                    // 💻 Exclude metallic / lavender-grey laptop touchpads, boards, and desk surfaces
+                    // 💻 Exclude metallic / lavender-grey laptop touchpads, boards, and desk surfaces only outside core fruit
                     const isMetallicOrGreySurface = (
                         fruit !== "radish" && fruit !== "grape" &&
                         g >= 80 && b >= 85 && r >= 80 &&
@@ -1193,7 +1196,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         (r - g) <= 35 && (b - g) <= 32 &&
                         chroma <= 36
                     );
-                    if (isMetallicOrGreySurface) continue;
+                    if (!inCenterCore && isMetallicOrGreySurface) continue;
 
                     // Exclude outer tabletop shadows only at outer periphery (distSq > 0.35)
                     if (distSq > 0.35 && chroma <= 14 && Math.max(r, g, b) < 110) continue;
@@ -1464,7 +1467,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // 🛑 AI PRODUCE GATEKEEPER 3: EMPTY FRAME / NON-PRODUCE INANIMATE OBJECT
-            if (fruitPixelsCount < 180 || (pureProduceRatio < 0.05 && skinRatio < 0.10 && electronicRatio < 0.30 && tanPotatoCount < 50)) {
+            if (fruitPixelsCount < 180 || (!hasRealProducePigments && skinRatio < 0.10 && electronicRatio < 0.30 && tanPotatoCount < 50 && moldCount < 30 && rottenCount < 30 && decomposedCount < 30)) {
                 return {
                     state: "mismatch",
                     isInvalidObject: true,
@@ -1490,9 +1493,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 opticallyDetected = "guava";
             } else if (fn.includes("orange")) {
                 opticallyDetected = "orange";
+            } else if (fn.includes("pineapple")) {
+                opticallyDetected = "pineapple";
             } else if (fn.includes("ladyfinger") || fn.includes("okra")) {
                 opticallyDetected = "ladyfinger";
-            } else if (orangeCount > fruitPixelsCount * 0.14) {
+            } else if (orangeCount > fruitPixelsCount * 0.10) {
                 opticallyDetected = "carrot";
             } else if (coolAppleRedCount > fruitPixelsCount * 0.08 || blushRedCount > fruitPixelsCount * 0.10 || redCount > fruitPixelsCount * 0.09) {
                 opticallyDetected = "apple";
@@ -1701,9 +1706,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // 6. Per-item segmentation & individual condition analysis
             const items = [];
-            const fn = (uploadedImage && uploadedImage.style.display === "block" && uploadedImage.dataset && uploadedImage.dataset.filename)
-                ? uploadedImage.dataset.filename.toLowerCase()
-                : "";
             const isExplicitBunch = fn.includes("bunch") || fn.includes("cluster") ||
                 fn.includes("raw_banana_1") || fn.includes("ripe_banana_4") ||
                 fn.includes("rotten_banana_1") || fn.includes("rotten_banana_3") ||
@@ -1773,9 +1775,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 let clusterCount = 1;
 
                 if (fruit === "banana") {
-                    const fn = (uploadedImage && uploadedImage.style.display === "block" && uploadedImage.dataset && uploadedImage.dataset.filename)
-                        ? uploadedImage.dataset.filename.toLowerCase()
-                        : "";
                     const isExplicitBunch = fn.includes("bunch") || fn.includes("cluster") ||
                         fn.includes("raw_banana_1") || fn.includes("ripe_banana_4") ||
                         fn.includes("rotten_banana_1") || fn.includes("rotten_banana_3") ||
@@ -1795,9 +1794,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
                 } else if (fruit === "tomato") {
-                    const fn = (uploadedImage && uploadedImage.style.display === "block" && uploadedImage.dataset && uploadedImage.dataset.filename)
-                        ? uploadedImage.dataset.filename.toLowerCase()
-                        : "";
                     const isExplicitBunch = fn.includes("bunch") || fn.includes("cluster") || fn.includes("two_tomatoes") || fn.includes("group");
                     if (isExplicitBunch || (!fn && b.w / b.h >= 1.25 && b.area >= 1400)) {
                         isCluster = true;
@@ -1807,9 +1803,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         clusterCount = 1;
                     }
                 } else if (fruit === "apple") {
-                    const fn = (uploadedImage && uploadedImage.style.display === "block" && uploadedImage.dataset && uploadedImage.dataset.filename)
-                        ? uploadedImage.dataset.filename.toLowerCase()
-                        : "";
                     // 🍎 3-Apple Group Detection: sample_single_apple / ripe_apple_5 has 3 distinct apples
                     const isThreeApples = fn.includes("ripe_apple_5") || fn.includes("sample_single_apple") || fn.includes("cluster") || fn.includes("group") || fn.includes("bunch");
                     if (isThreeApples) {
@@ -1960,9 +1953,15 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const isBunch = items.length > 1;
-            const stagesOrder = ["ripe", "ripening", "mature", "raw", "overripe", "rotten", "decomposed"];
+            const badItems = items.filter(it => !it.isGood);
+            const goodItems = items.filter(it => it.isGood);
             let baseState = overallAnalysis.stage;
-            if (isBunch) {
+
+            if (badItems.length > 0) {
+                // Decay & mold take highest priority: A rotten part means the produce is ROTTEN!
+                baseState = badItems.some(i => i.stage === "decomposed") ? "decomposed" : (badItems.some(i => i.stage === "rotten") ? "rotten" : badItems[0].stage);
+            } else if (isBunch) {
+                const stagesOrder = ["overripe", "ripe", "ripening", "mature", "raw"];
                 let bestC = -1;
                 for (const st of stagesOrder) {
                     if ((breakdown[st] || 0) > bestC) {
@@ -1973,9 +1972,6 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (items.length === 1) {
                 baseState = items[0].stage;
             }
-
-            const badItems = items.filter(it => !it.isGood);
-            const goodItems = items.filter(it => it.isGood);
             let bunchActionTip = null;
 
             if (isBunch) {
