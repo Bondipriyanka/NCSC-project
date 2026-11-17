@@ -1460,7 +1460,11 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (yellowCount > fruitPixelsCount * 0.14 || brightYellowCount > fruitPixelsCount * 0.08) {
                 opticallyDetected = "banana";
             } else if (greenCount > fruitPixelsCount * 0.12 && yellowCount < fruitPixelsCount * 0.12 && redCount < fruitPixelsCount * 0.06 && orangeCount < fruitPixelsCount * 0.06) {
-                opticallyDetected = "guava";
+                // Elongated slender green pod = ladyfinger (okra), round/oval green = guava
+                const maxDim = sigBlobs.length > 0 ? Math.max(sigBlobs[0].w, sigBlobs[0].h) : 1;
+                const minDim = sigBlobs.length > 0 ? Math.max(1, Math.min(sigBlobs[0].w, sigBlobs[0].h)) : 1;
+                const podAspect = maxDim / minDim;
+                opticallyDetected = (podAspect >= 2.2 || fruit === "ladyfinger") ? "ladyfinger" : "guava";
             } else if (whiteCount > fruitPixelsCount * 0.22 && redCount < fruitPixelsCount * 0.06) {
                 opticallyDetected = "radish";
             } else if (tanPotatoCount > fruitPixelsCount * 0.18 && yellowCount < fruitPixelsCount * 0.05 && redCount < fruitPixelsCount * 0.05 && skinRatio < 0.18) {
@@ -1575,6 +1579,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     const selectedName = fruit.charAt(0).toUpperCase() + fruit.slice(1);
                     return { state: "mismatch", message: `⚠️ NO ${fruit.toUpperCase()} DETECTED: No ${selectedName} found in camera view. Please align ${selectedName} to the lens.` };
                 }
+            }
+            if (fruit === "ladyfinger" && (coolAppleRedCount > fruitPixelsCount * 0.12 || redCount > fruitPixelsCount * 0.14)) {
+                const det = warmTomatoRedCount > coolAppleRedCount ? "tomato" : "apple";
+                return { state: "mismatch", detectedFruit: det, message: "⚠️ PRODUCT MISMATCH DETECTED: Crimson " + det.toUpperCase() + " profile detected instead of Lady's Finger. Switching to " + det.toUpperCase() + "." };
+            }
+            if (fruit === "ladyfinger" && yellowCount > fruitPixelsCount * 0.20 && greenCount < fruitPixelsCount * 0.08) {
+                return { state: "mismatch", detectedFruit: "banana", message: "⚠️ PRODUCT MISMATCH DETECTED: Yellow Banana profile detected instead of Lady's Finger. Switching to Banana." };
+            }
+            if (fruit === "ladyfinger" && orangeCount > fruitPixelsCount * 0.15) {
+                return { state: "mismatch", detectedFruit: "carrot", message: "⚠️ PRODUCT MISMATCH DETECTED: Orange Carrot profile detected instead of Lady's Finger. Switching to Carrot." };
             }
             if (fruit === "brinjal" && purpleCount < fruitPixelsCount * 0.05 && greenCount < fruitPixelsCount * 0.08 && rottenCount < fruitPixelsCount * 0.08 && decomposedCount < fruitPixelsCount * 0.08) {
                 return { state: "mismatch", message: "⚠️ VEGETABLE MISMATCH DETECTED: No purple/green content. Did you scan a Potato/Banana/Tomato instead of a Brinjal?" };
@@ -2346,6 +2360,80 @@ document.addEventListener("DOMContentLoaded", () => {
                     indicators: "Mushy collapsed pulp, moldy skin, intense fermented odor.",
                     biochemical: "Extensive fungal mycelial breakdown and fermentation.",
                     advice: "Compost or discard immediately."
+                }
+            },
+            ladyfinger: {
+                raw: {
+                    indicators: "Small, dark green, very tender pod (<7 cm), snap-easy tip, zero woody fiber.",
+                    biochemical: "High insoluble mucilage polysaccharides, low starch, harvest-fresh cellular turgor.",
+                    advice: "Store in cool ventilated bag (10-12°C). Cook within 2-3 days."
+                },
+                mature: {
+                    indicators: "Full-sized, vibrant green pod, firm intact ridges, snappy tip.",
+                    biochemical: "Optimal pectin-to-cellulose ratio, peak mineral density (potassium & folate).",
+                    advice: "Prime condition for cooking. Avoid washing until immediately before preparation."
+                },
+                ripening: {
+                    indicators: "Light green ground color, slight ridge softening, tips beginning to bend.",
+                    biochemical: "Initial moisture loss through pod transpiration, cell wall pectins softening.",
+                    advice: "Consume within 24-48 hours before woody fiber development."
+                },
+                ripe: {
+                    indicators: "Bright vibrant green, crisp snapping texture, tender edible seeds, zero blemishes.",
+                    biochemical: "Optimal culinary peak; tender soluble fiber, low crude lignin.",
+                    advice: "Ideal eating window. Keep dry in paper towel inside refrigerator crisper."
+                },
+                overripe: {
+                    indicators: "Woody fibrous skin, tough bendy pods, brown seed discoloration, shrivelled tips.",
+                    biochemical: "Lignification of secondary cell wall fibers; loss of moisture and mucilage quality.",
+                    advice: "Tough for raw stir-fry; use in slow-cooked stews or cut away fibrous tips."
+                },
+                rotten: {
+                    indicators: "Sunken brown necrotic spots, slimy water-soaked lesions, sour smell.",
+                    biochemical: "Choanephora wet rot or Fusarium fungal infection; complete tissue maceration.",
+                    advice: "Do not consume. Quarantined to prevent mold spreading to adjacent pods."
+                },
+                decomposed: {
+                    indicators: "Total structural collapse, black liquid rot, extensive mycelial mold coverage.",
+                    biochemical: "Anaerobic microbial putrefaction, toxic mycotoxin accumulation.",
+                    advice: "Biohazard. Discard or compost immediately."
+                }
+            },
+            guava: {
+                raw: {
+                    indicators: "Deep dark green peel, hard stone-like flesh, highly astringent.",
+                    biochemical: "High tannin concentration (>1.5%), insoluble protopectin, negligible aromatic esters.",
+                    advice: "Keep at ambient room temperature (20-24°C) to allow natural ripening."
+                },
+                mature: {
+                    indicators: "Light green peel, firm turgor, faint developing guava fragrance.",
+                    biochemical: "Ethylene synthesis triggered; tannin breakdown initiates starch conversion to fructose.",
+                    advice: "Ripens within 2-4 days naturally at room temperature."
+                },
+                ripening: {
+                    indicators: "Yellow-green tint spreading across peel, slight yield under gentle thumb pressure.",
+                    biochemical: "Carotenoid pigment unmasking, ester volatile emissions (sweet floral scent).",
+                    advice: "Ready to eat within 24 hours. Safe and delicious."
+                },
+                ripe: {
+                    indicators: "Uniform yellow-green peel, fragrant floral aroma, soft yielding sweet flesh.",
+                    biochemical: "Peak vitamin C density (228 mg/100g, 4x oranges), optimal Brix (10-12°).",
+                    advice: "Peak consumption window (1-3 days). Refrigerate to extend shelf life."
+                },
+                overripe: {
+                    indicators: "Deep golden-yellow peel, large soft water-soaked bruises, very soft pulp.",
+                    biochemical: "Rapid polygalacturonase activity causing cellular collapse, mild fermentation.",
+                    advice: "Consume immediately or process into guava smoothies, jams, or juice."
+                },
+                rotten: {
+                    indicators: "Sunken brown rot lesions, weeping peel cracks, sour fermented odor.",
+                    biochemical: "Colletotrichum gloeosporioides (Anthracnose) infection; cellular membrane dissolution.",
+                    advice: "Unsafe for human consumption. Segregate or discard."
+                },
+                decomposed: {
+                    indicators: "Liquefied collapsed fruit, black/white mold sporulation, putrid odor.",
+                    biochemical: "Total microbial decomposition, toxic fungal mycotoxins.",
+                    advice: "Biohazard status. Discard immediately."
                 }
             }
         };
