@@ -2565,15 +2565,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return tempCanvas.toDataURL("image/jpeg", 0.85).split(",")[1];
     }
 
-    function callGeminiVisionAPI(base64Image, selectedFruit, callback) {
+    async function callGeminiVisionAPI(base64Image, selectedFruit, callback) {
         const apiKey = localStorage.getItem("gemini_api_key");
         if (!apiKey || apiKey === "null" || apiKey === "undefined" || apiKey.trim() === "" || apiKey.includes("YOUR_API_KEY")) {
             callback({ error: "No API Key configured. Click the gear icon to save your key." });
             return;
         }
 
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-        
         const prompt = `You are an expert agricultural quality inspector and computer vision analyzer for fruit & vegetable freshness.
 Analyze this image of fruit(s) or vegetable(s).
 
@@ -2630,30 +2628,86 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             }]
         };
 
-        fetch(url, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey
-            },
-            body: JSON.stringify(requestBody)
-        })
-        .then(async response => {
-            if (!response.ok) {
-                let errMsg = `API returned status ${response.status}`;
+        const candidateEndpoints = [
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent",
+            "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
+        ];
+
+        let lastError = null;
+        let successData = null;
+
+        for (const url of candidateEndpoints) {
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": apiKey
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (response.ok) {
+                    successData = await response.json();
+                    break;
+                }
+
+                let errMsg = `Status ${response.status}`;
                 try {
                     const errData = await response.json();
                     if (errData && errData.error && errData.error.message) {
-                        errMsg = `${errData.error.message} (${response.status})`;
+                        errMsg = errData.error.message;
                     }
                 } catch (e) {}
-                throw new Error(errMsg);
+
+                // If not 404 (e.g. invalid key or quota), stop cascade and report
+                if (response.status !== 404) {
+                    throw new Error(errMsg);
+                }
+                lastError = new Error(errMsg);
+            } catch (err) {
+                if (!err.message.includes("404") && !err.message.includes("not found")) {
+                    lastError = err;
+                    break;
+                }
+                lastError = err;
             }
-            return response.json();
-        })
-        .then(data => {
+        }
+
+        // If candidates 404'd, discover working models from ListModels API
+        if (!successData && (!lastError || lastError.message.includes("404") || lastError.message.includes("not found"))) {
             try {
-                let text = data.candidates[0].content.parts[0].text.trim();
+                const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                if (listRes.ok) {
+                    const listData = await listRes.json();
+                    const models = listData.models || [];
+                    const compatible = models.find(m => 
+                        m.supportedGenerationMethods && 
+                        m.supportedGenerationMethods.includes("generateContent") &&
+                        (m.name.includes("flash") || m.name.includes("gemini"))
+                    );
+                    if (compatible) {
+                        const dynamicUrl = `https://generativelanguage.googleapis.com/v1beta/${compatible.name}:generateContent`;
+                        const dynRes = await fetch(dynamicUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+                            body: JSON.stringify(requestBody)
+                        });
+                        if (dynRes.ok) {
+                            successData = await dynRes.json();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Dynamic ListModels query skipped:", e);
+            }
+        }
+
+        if (successData) {
+            try {
+                let text = successData.candidates[0].content.parts[0].text.trim();
                 if (text.startsWith("```")) {
                     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
                 }
@@ -2663,12 +2717,10 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 console.error("Parse error:", err);
                 callback({ error: "Failed to parse Gemini response." });
             }
-        })
-        .catch(err => {
-            console.error("API error:", err);
+        } else {
             const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
-            callback({ error: `${err.message || "Network or API Key error."} [Using Key: ${maskedKey}]` });
-        });
+            callback({ error: `${(lastError && lastError.message) || "No supported Gemini vision model found for this key."} [Using Key: ${maskedKey}]` });
+        }
     }
 
     function completeScan() {
@@ -2681,7 +2733,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             resValue.style.color = "var(--text-secondary)";
             resShelf.innerText = "Vision API";
             resShelf.style.backgroundColor = "var(--border-color)";
-            resDesc.innerText = "Sending image to Gemini 2.5 Flash for multi-item & batch freshness analysis...";
+            resDesc.innerText = "Sending image to Gemini Vision API for multi-item & batch freshness analysis...";
             scanBtn.disabled = true;
 
             const base64Img = getCaptureBase64();
