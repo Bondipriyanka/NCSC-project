@@ -2628,30 +2628,40 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             }]
         };
 
-        const candidateEndpoints = [
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent",
-            "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
+        const modelsToTry = [
+            "gemini-2.5-flash",
+            "gemini-2.0-flash"
         ];
 
-        let lastError = null;
-        let successData = null;
+        let lastErr = null;
 
-        for (const url of candidateEndpoints) {
+        for (const model of modelsToTry) {
+            const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+            const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
             try {
-                const response = await fetch(url, {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+                const fetchOpts = {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json",
                         "x-goog-api-key": apiKey
                     },
                     body: JSON.stringify(requestBody)
-                });
+                };
+                if (controller) fetchOpts.signal = controller.signal;
+
+                const response = await fetch(url, fetchOpts);
+                if (timeoutId) clearTimeout(timeoutId);
 
                 if (response.ok) {
-                    successData = await response.json();
-                    break;
+                    const data = await response.json();
+                    let text = data.candidates[0].content.parts[0].text.trim();
+                    if (text.startsWith("```")) {
+                        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                    }
+                    const parsed = JSON.parse(text);
+                    callback(parsed);
+                    return;
                 }
 
                 let errMsg = `Status ${response.status}`;
@@ -2662,65 +2672,18 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                     }
                 } catch (e) {}
 
-                // If not 404 (e.g. invalid key or quota), stop cascade and report
-                if (response.status !== 404) {
-                    throw new Error(errMsg);
-                }
-                lastError = new Error(errMsg);
-            } catch (err) {
-                if (!err.message.includes("404") && !err.message.includes("not found")) {
-                    lastError = err;
+                lastErr = new Error(errMsg);
+                if (response.status === 400 || response.status === 403 || response.status === 429) {
                     break;
                 }
-                lastError = err;
-            }
-        }
-
-        // If candidates 404'd, discover working models from ListModels API
-        if (!successData && (!lastError || lastError.message.includes("404") || lastError.message.includes("not found"))) {
-            try {
-                const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                if (listRes.ok) {
-                    const listData = await listRes.json();
-                    const models = listData.models || [];
-                    const compatible = models.find(m => 
-                        m.supportedGenerationMethods && 
-                        m.supportedGenerationMethods.includes("generateContent") &&
-                        (m.name.includes("flash") || m.name.includes("gemini"))
-                    );
-                    if (compatible) {
-                        const dynamicUrl = `https://generativelanguage.googleapis.com/v1beta/${compatible.name}:generateContent`;
-                        const dynRes = await fetch(dynamicUrl, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-                            body: JSON.stringify(requestBody)
-                        });
-                        if (dynRes.ok) {
-                            successData = await dynRes.json();
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn("Dynamic ListModels query skipped:", e);
-            }
-        }
-
-        if (successData) {
-            try {
-                let text = successData.candidates[0].content.parts[0].text.trim();
-                if (text.startsWith("```")) {
-                    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-                }
-                const parsed = JSON.parse(text);
-                callback(parsed);
             } catch (err) {
-                console.error("Parse error:", err);
-                callback({ error: "Failed to parse Gemini response." });
+                if (timeoutId) clearTimeout(timeoutId);
+                lastErr = (err && err.name === "AbortError") ? new Error("Request timed out after 6s") : err;
             }
-        } else {
-            const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
-            callback({ error: `${(lastError && lastError.message) || "No supported Gemini vision model found for this key."} [Using Key: ${maskedKey}]` });
         }
+
+        const maskedKey = apiKey ? `${apiKey.substring(0, 6)}... (len: ${apiKey.length})` : "None";
+        callback({ error: `${(lastErr && lastErr.message) || "Network error"} [Using Key: ${maskedKey}]` });
     }
 
     function completeScan() {
@@ -2733,7 +2696,7 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
             resValue.style.color = "var(--text-secondary)";
             resShelf.innerText = "Vision API";
             resShelf.style.backgroundColor = "var(--border-color)";
-            resDesc.innerText = "Sending image to Gemini Vision API for multi-item & batch freshness analysis...";
+            resDesc.innerText = "Sending image to Gemini 2.5 Flash for multi-item & batch freshness analysis...";
             scanBtn.disabled = true;
 
             const base64Img = getCaptureBase64();
@@ -2743,18 +2706,8 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                 scanBtn.innerText = "Scan Freshness";
 
                 if (apiResult.error) {
-                    showAPIWarning(`Gemini Vision: ${apiResult.error}`);
-                    resValue.innerText = "GEMINI ERROR ⚠️";
-                    resValue.style.color = "var(--c-rot)";
-                    resShelf.innerText = "API Error";
-                    resShelf.style.backgroundColor = "rgba(244, 67, 54, 0.2)";
-                    resShelf.style.color = "var(--c-rot)";
-                    resDesc.innerHTML = `<span style="color:#d32f2f; font-weight:700;">⚠️ Gemini Vision API Error:</span> ${apiResult.error}<br><br><small>To resolve: Check your Gemini API key (click ⚙️ next to Gemini Vision) or switch to 'Local Offline' if you want zero-network offline scanning.</small>`;
-                    phoneMockup.className = "phone-mockup res-rot";
-                    scannerPanel.className = "panel scanner-panel res-rot";
-                    if (retryScanBtn) retryScanBtn.style.display = "flex";
-                    showBackButtons(true);
-                    playBeep(220, 0.4);
+                    showAPIWarning(`Gemini API: ${apiResult.error}. Switching to local offline scanner...`);
+                    runLocalScan();
                 } else {
                     const bunchData = (apiResult && apiResult.isBunch) ? {
                         isBunch: true,
@@ -2764,11 +2717,17 @@ Return ONLY a valid JSON object in this exact schema without markdown code block
                     } : null;
 
                     displayScanResult(
-                        apiResult.detectedFruit, 
+                        apiResult.detectedFruit || selectedFruit, 
                         apiResult.state ? apiResult.state.toLowerCase() : "ripe", 
                         apiResult.reason || getStageDescription(selectedFruit, apiResult.state || "ripe"),
                         bunchData
                     );
+                }
+            });
+        } else {
+            runLocalScan();
+        }
+    }
                 }
             });
         } else {
